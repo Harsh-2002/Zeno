@@ -108,4 +108,7 @@ export function applyThemeCSS(themeId) {
   r.setProperty('--border-subtle', u.borderSubtle);
   r.setProperty('--border-focus', u.focus);
   r.setProperty('--surface-overlay', u.secondary);
+  r.setProperty('--match-bg', u.matchBg);
+  r.setProperty('--match-active-bg', u.activeMatchBg);
+  r.setProperty('--match-active-border', u.activeMatchBorder);
 }

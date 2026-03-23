@@ -7,9 +7,9 @@ export const THEMES = {
 };
 
 export const UI_COLORS = {
-  dark: { secondary: '#2d2d2d', hover: '#3a3a3a', border: '#333', borderSubtle: '#2a2a2a', focus: '#555' },
-  dracula: { secondary: '#21222c', hover: '#44475a', border: '#191a21', borderSubtle: '#191a21', focus: '#6272a4' },
-  solarized: { secondary: '#073642', hover: '#094959', border: '#002028', borderSubtle: '#002028', focus: '#586e75' },
-  nord: { secondary: '#3b4252', hover: '#434c5e', border: '#2e3440', borderSubtle: '#2e3440', focus: '#4c566a' },
-  monokai: { secondary: '#1e1f1c', hover: '#49483e', border: '#1a1b18', borderSubtle: '#1a1b18', focus: '#75715e' }
+  dark: { secondary: '#2d2d2d', hover: '#3a3a3a', border: '#333', borderSubtle: '#2a2a2a', focus: '#555', matchBg: 'rgba(255,255,255,0.08)', activeMatchBg: 'rgba(255,255,255,0.18)', activeMatchBorder: '#555' },
+  dracula: { secondary: '#21222c', hover: '#44475a', border: '#191a21', borderSubtle: '#191a21', focus: '#6272a4', matchBg: 'rgba(98,114,164,0.25)', activeMatchBg: 'rgba(98,114,164,0.5)', activeMatchBorder: '#6272a4' },
+  solarized: { secondary: '#073642', hover: '#094959', border: '#002028', borderSubtle: '#002028', focus: '#586e75', matchBg: 'rgba(88,110,117,0.25)', activeMatchBg: 'rgba(88,110,117,0.5)', activeMatchBorder: '#586e75' },
+  nord: { secondary: '#3b4252', hover: '#434c5e', border: '#2e3440', borderSubtle: '#2e3440', focus: '#4c566a', matchBg: 'rgba(76,86,106,0.25)', activeMatchBg: 'rgba(76,86,106,0.5)', activeMatchBorder: '#4c566a' },
+  monokai: { secondary: '#1e1f1c', hover: '#49483e', border: '#1a1b18', borderSubtle: '#1a1b18', focus: '#75715e', matchBg: 'rgba(117,113,94,0.25)', activeMatchBg: 'rgba(117,113,94,0.5)', activeMatchBorder: '#75715e' }
 };

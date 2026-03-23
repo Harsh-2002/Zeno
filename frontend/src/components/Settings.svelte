@@ -154,11 +154,12 @@
   .value { font-size: 13px; color: var(--text-muted); }
   .value.mono { font-family: var(--font-mono); font-size: 11px; }
   .control {
-    background: var(--bg-hover); color: var(--text-primary);
+    color: var(--text-primary);
     border: 1px solid var(--border); border-radius: var(--radius-xs);
-    padding: 5px 24px 5px 10px; font-size: 13px; font-family: var(--font-ui);
+    padding: 6px 32px 6px 10px; font-size: 13px; font-family: var(--font-ui);
     outline: none; cursor: pointer; min-width: 110px;
-    appearance: auto;
+    appearance: none; -webkit-appearance: none;
+    background: var(--bg-hover) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
   }
   .control:focus { border-color: var(--border-focus); }
   .toggle {
