@@ -1,0 +1,195 @@
+<script>
+  import { THEMES } from '../lib/constants/themes.js';
+  import {
+    themeState, setTheme, setFontSize, setCursorStyle,
+    setCursorBlink, setLineHeight, setScrollback, setCopyOnSelect
+  } from '../lib/stores/theme.svelte.js';
+
+  let { visible = false, onClose } = $props();
+
+  const themeKeys = Object.keys(THEMES);
+  const cursorStyles = ['block', 'underline', 'bar'];
+  const lineHeights = [1.0, 1.1, 1.2, 1.3, 1.4];
+  const scrollbackOptions = [10000, 50000, 100000, 500000];
+</script>
+
+{#if visible}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div class="overlay" onclick={onClose}></div>
+  <div class="panel">
+    <div class="header">
+      <span class="title">Settings</span>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <span class="close" onclick={onClose}>&times;</span>
+    </div>
+
+    <div class="body">
+      <div class="section-label">Appearance</div>
+
+      <label class="row">
+        <span class="label">Theme</span>
+        <select class="control" value={themeState.themeId} onchange={(e) => setTheme(e.target.value)}>
+          {#each themeKeys as key}
+            <option value={key}>{THEMES[key].name}</option>
+          {/each}
+        </select>
+      </label>
+
+      <div class="row">
+        <span class="label">Font Size</span>
+        <div class="stepper">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <span class="step-btn" onclick={() => setFontSize(themeState.fontSize - 1)}>-</span>
+          <span class="step-val">{themeState.fontSize}px</span>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <span class="step-btn" onclick={() => setFontSize(themeState.fontSize + 1)}>+</span>
+        </div>
+      </div>
+
+      <label class="row">
+        <span class="label">Cursor Style</span>
+        <select class="control" value={themeState.cursorStyle} onchange={(e) => setCursorStyle(e.target.value)}>
+          {#each cursorStyles as s}
+            <option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="row">
+        <span class="label">Cursor Blink</span>
+        <input type="checkbox" class="toggle" checked={themeState.cursorBlink}
+          onchange={(e) => setCursorBlink(e.target.checked)} />
+      </label>
+
+      <label class="row">
+        <span class="label">Line Height</span>
+        <select class="control" value={themeState.lineHeight} onchange={(e) => setLineHeight(parseFloat(e.target.value))}>
+          {#each lineHeights as lh}
+            <option value={lh}>{lh.toFixed(1)}</option>
+          {/each}
+        </select>
+      </label>
+
+      <div class="section-label">Behavior</div>
+
+      <label class="row">
+        <span class="label">Scrollback</span>
+        <select class="control" value={themeState.scrollback} onchange={(e) => setScrollback(parseInt(e.target.value))}>
+          {#each scrollbackOptions as sb}
+            <option value={sb}>{(sb / 1000).toFixed(0)}K lines</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="row">
+        <span class="label">Copy on Select</span>
+        <input type="checkbox" class="toggle" checked={themeState.copyOnSelect}
+          onchange={(e) => setCopyOnSelect(e.target.checked)} />
+      </label>
+
+      <div class="section-label">Server</div>
+
+      <div class="row info">
+        <span class="label">Port</span>
+        <span class="value">{themeState.port}</span>
+      </div>
+      <div class="row info">
+        <span class="label">Shell</span>
+        <span class="value">{themeState.shell}</span>
+      </div>
+      <div class="row info">
+        <span class="label">Config</span>
+        <span class="value mono">~/.zeno.yaml</span>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .overlay {
+    position: fixed; inset: 0; z-index: 900;
+    background: rgba(0,0,0,0.3);
+  }
+  .panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 320px; max-width: 90vw;
+    z-index: 950;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    box-shadow: -4px 0 24px var(--shadow);
+    animation: slide-in 0.15s ease;
+  }
+  @keyframes slide-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .close {
+    font-size: 20px; color: var(--text-muted); cursor: pointer;
+    width: 28px; height: 28px; display: flex; align-items: center;
+    justify-content: center; border-radius: var(--radius-xs);
+    transition: background 0.1s;
+  }
+  .close:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .body { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .section-label {
+    padding: 12px 20px 6px; font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 20px; min-height: 36px;
+  }
+  .row.info { opacity: 0.7; }
+  .label { font-size: 13px; color: var(--text-primary); }
+  .value { font-size: 13px; color: var(--text-muted); }
+  .value.mono { font-family: var(--font-mono); font-size: 11px; }
+  .control {
+    background: var(--bg-hover); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: var(--radius-xs);
+    padding: 5px 24px 5px 10px; font-size: 13px; font-family: var(--font-ui);
+    outline: none; cursor: pointer; min-width: 110px;
+    appearance: auto;
+  }
+  .control:focus { border-color: var(--border-focus); }
+  .toggle {
+    width: 36px; height: 20px; appearance: none; -webkit-appearance: none;
+    background: var(--border); border-radius: 10px; position: relative;
+    cursor: pointer; transition: background 0.2s; border: none; outline: none;
+  }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--text-primary); transition: transform 0.2s;
+  }
+  .toggle:checked { background: var(--border-focus); }
+  .toggle:checked::after { transform: translateX(16px); }
+  .stepper {
+    display: flex; align-items: center; gap: 0;
+    border: 1px solid var(--border); border-radius: var(--radius-xs);
+    overflow: hidden;
+  }
+  .step-btn {
+    width: 28px; height: 28px; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; color: var(--text-primary);
+    font-size: 14px; transition: background 0.1s;
+    background: var(--bg-hover);
+  }
+  .step-btn:hover { background: var(--border-focus); }
+  .step-val {
+    min-width: 44px; text-align: center; font-size: 13px;
+    color: var(--text-primary); font-family: var(--font-mono);
+    background: transparent; padding: 0 4px;
+  }
+
+  @media (max-width: 480px) { .panel { width: 100%; } }
+</style>

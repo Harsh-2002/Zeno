@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -e
+
+PORT="${1:-8080}"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+# Kill anything on this port
+if lsof -ti:"$PORT" >/dev/null 2>&1; then
+  echo "→ Killing process on port $PORT"
+  lsof -ti:"$PORT" | xargs kill -9 2>/dev/null || true
+  sleep 1
+fi
+
+# Install frontend deps if needed
+if [ ! -d "$ROOT/frontend/node_modules" ]; then
+  echo "→ Installing frontend dependencies..."
+  (cd "$ROOT/frontend" && npm install --silent)
+fi
+
+# Build frontend → backend/static/
+echo "→ Building frontend..."
+(cd "$ROOT/frontend" && npm run build --silent)
+
+# Build Go binary
+echo "→ Building backend..."
+(cd "$ROOT/backend" && go build -o "$ROOT/zeno" .)
+
+# Run
+echo "→ zeno on http://localhost:$PORT"
+exec "$ROOT/zeno" --port "$PORT" "${@:2}"
