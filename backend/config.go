@@ -9,15 +9,18 @@ import (
 )
 
 type Config struct {
-	Theme        string  `yaml:"theme"        json:"theme"`
-	FontSize     int     `yaml:"fontSize"     json:"fontSize"`
-	CursorStyle  string  `yaml:"cursorStyle"  json:"cursorStyle"`
-	CursorBlink  bool    `yaml:"cursorBlink"  json:"cursorBlink"`
-	LineHeight   float64 `yaml:"lineHeight"   json:"lineHeight"`
-	Scrollback   int     `yaml:"scrollback"   json:"scrollback"`
-	CopyOnSelect bool    `yaml:"copyOnSelect" json:"copyOnSelect"`
-	Port         int     `yaml:"port"         json:"port"`
-	Shell        string  `yaml:"shell"        json:"shell"`
+	Theme         string  `yaml:"theme"         json:"theme"`
+	FontSize      int     `yaml:"fontSize"      json:"fontSize"`
+	FontFamily    string  `yaml:"fontFamily"    json:"fontFamily"`
+	FontLigatures bool    `yaml:"fontLigatures" json:"fontLigatures"`
+	CursorStyle   string  `yaml:"cursorStyle"   json:"cursorStyle"`
+	CursorBlink   bool    `yaml:"cursorBlink"   json:"cursorBlink"`
+	LineHeight    float64 `yaml:"lineHeight"    json:"lineHeight"`
+	Scrollback    int     `yaml:"scrollback"    json:"scrollback"`
+	CopyOnSelect  bool    `yaml:"copyOnSelect"  json:"copyOnSelect"`
+	Port          int     `yaml:"port"          json:"port"`
+	Shell         string  `yaml:"shell"         json:"shell"`
+	Layout        string  `yaml:"layout,omitempty" json:"layout,omitempty"`
 }
 
 var (
@@ -29,6 +32,7 @@ func defaultConfig() Config {
 	return Config{
 		Theme:       "dark",
 		FontSize:    14,
+		FontFamily:  "JetBrains Mono",
 		CursorStyle: "block",
 		CursorBlink: true,
 		LineHeight:  1.1,
@@ -72,6 +76,10 @@ func loadConfig() Config {
 	if fileCfg.FontSize > 0 {
 		cfg.FontSize = fileCfg.FontSize
 	}
+	if fileCfg.FontFamily != "" {
+		cfg.FontFamily = fileCfg.FontFamily
+	}
+	cfg.FontLigatures = fileCfg.FontLigatures
 	if fileCfg.CursorStyle != "" {
 		cfg.CursorStyle = fileCfg.CursorStyle
 	}
@@ -88,6 +96,9 @@ func loadConfig() Config {
 	}
 	if fileCfg.Shell != "" {
 		cfg.Shell = fileCfg.Shell
+	}
+	if fileCfg.Layout != "" {
+		cfg.Layout = fileCfg.Layout
 	}
 
 	return cfg

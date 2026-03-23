@@ -3,14 +3,16 @@ import { THEMES, UI_COLORS } from '../constants/themes.js';
 export const themeState = $state({
   themeId: 'dark',
   fontSize: 14,
+  fontFamily: 'JetBrains Mono',
+  fontLigatures: false,
   cursorStyle: 'block',
   cursorBlink: true,
   lineHeight: 1.1,
   scrollback: 100000,
   copyOnSelect: false,
-  // Server-only (read-only in UI)
   port: 8080,
   shell: '',
+  layout: '',
 });
 
 let saveTimer = null;
@@ -22,6 +24,8 @@ export async function loadConfig() {
     const cfg = await res.json();
     themeState.themeId = cfg.theme || 'dark';
     themeState.fontSize = cfg.fontSize || 14;
+    themeState.fontFamily = cfg.fontFamily || 'JetBrains Mono';
+    themeState.fontLigatures = cfg.fontLigatures || false;
     themeState.cursorStyle = cfg.cursorStyle || 'block';
     themeState.cursorBlink = cfg.cursorBlink !== false;
     themeState.lineHeight = cfg.lineHeight || 1.1;
@@ -29,6 +33,7 @@ export async function loadConfig() {
     themeState.copyOnSelect = cfg.copyOnSelect || false;
     themeState.port = cfg.port || 8080;
     themeState.shell = cfg.shell || '';
+    themeState.layout = cfg.layout || '';
     applyThemeCSS(themeState.themeId);
   } catch (e) {
     // Fallback to defaults
@@ -45,11 +50,14 @@ function saveToServer() {
         body: JSON.stringify({
           theme: themeState.themeId,
           fontSize: themeState.fontSize,
+          fontFamily: themeState.fontFamily,
+          fontLigatures: themeState.fontLigatures,
           cursorStyle: themeState.cursorStyle,
           cursorBlink: themeState.cursorBlink,
           lineHeight: themeState.lineHeight,
           scrollback: themeState.scrollback,
           copyOnSelect: themeState.copyOnSelect,
+          layout: themeState.layout,
         })
       });
     } catch (e) {}
@@ -88,6 +96,22 @@ export function setLineHeight(lh) {
 
 export function setScrollback(sb) {
   themeState.scrollback = sb;
+  saveToServer();
+}
+
+export function setFontFamily(family) {
+  themeState.fontFamily = family;
+  saveToServer();
+}
+
+export function setFontLigatures(val) {
+  themeState.fontLigatures = val;
+  document.documentElement.classList.toggle('ligatures', val);
+  saveToServer();
+}
+
+export function setLayout(layout) {
+  themeState.layout = layout;
   saveToServer();
 }
 

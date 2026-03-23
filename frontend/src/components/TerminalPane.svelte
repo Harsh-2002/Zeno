@@ -10,7 +10,7 @@
   import { themeState } from '../lib/stores/theme.svelte.js';
   import { setTabTitle, markUnread } from '../lib/stores/tabs.svelte.js';
   import { THEMES } from '../lib/constants/themes.js';
-  import { createWebSocket, sendData, sendBinary, sendResize, MSG_DATA } from '../lib/utils/ws.js';
+  import { createWebSocket, sendData, sendBinary, sendResize, sendSessionConnect, MSG_DATA, MSG_SESSION } from '../lib/utils/ws.js';
   import SearchBar from './SearchBar.svelte';
   import DropOverlay from './DropOverlay.svelte';
 
@@ -38,7 +38,7 @@
         cursorBlink: themeState.cursorBlink,
         cursorStyle: themeState.cursorStyle,
         fontSize: themeState.fontSize,
-        fontFamily: '"JetBrains Mono", Menlo, Monaco, "Cascadia Code", "Courier New", monospace',
+        fontFamily: `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`,
         fontWeight: '400', fontWeightBold: '700',
         lineHeight: themeState.lineHeight,
         letterSpacing: 0,
@@ -51,7 +51,7 @@
       const searchAddon = new SearchAddon();
       term.loadAddon(fitAddon);
       term.loadAddon(searchAddon);
-      term.loadAddon(new WebLinksAddon());
+      term.loadAddon(new WebLinksAddon({ handler: (e, uri) => window.open(uri, '_blank', 'noopener') }));
       const u11 = new Unicode11Addon();
       term.loadAddon(u11);
       term.unicode.activeVersion = '11';
@@ -93,7 +93,7 @@
       cursorBlink: themeState.cursorBlink,
       cursorStyle: themeState.cursorStyle,
       fontSize: themeState.fontSize,
-      fontFamily: '"JetBrains Mono", Menlo, Monaco, "Cascadia Code", "Courier New", monospace',
+      fontFamily: `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`,
       fontWeight: '400', fontWeightBold: '700',
       lineHeight: themeState.lineHeight,
       letterSpacing: 0,
@@ -106,7 +106,7 @@
     const searchAddon = new SearchAddon();
     term.loadAddon(fitAddon);
     term.loadAddon(searchAddon);
-    term.loadAddon(new WebLinksAddon());
+    term.loadAddon(new WebLinksAddon({ handler: (e, uri) => window.open(uri, '_blank', 'noopener') }));
     const u11 = new Unicode11Addon();
     term.loadAddon(u11);
     term.unicode.activeVersion = '11';
@@ -118,35 +118,75 @@
       term.loadAddon(wgl);
     } catch (e) {}
 
-    const ws = createWebSocket();
+    let sessionId = '';
+    let reconnectAttempts = 0;
+    let lastOutputTime = 0;
+    let currentWs = null;
 
-    ws.onmessage = (event) => {
-      const data = new Uint8Array(event.data);
-      if (data.length === 0) return;
-      if (data[0] === MSG_DATA) {
-        term.write(data.slice(1));
-        markUnread(tabId);
-      }
-    };
+    function connectWs() {
+      const ws = createWebSocket();
+      currentWs = ws;
 
-    term.onData((data) => sendData(ws, data));
-    term.onBinary((data) => sendBinary(ws, data));
-    term.onTitleChange((title) => { if (title) setTabTitle(tabId, title); });
+      ws.onmessage = (event) => {
+        const data = new Uint8Array(event.data);
+        if (data.length === 0) return;
+        if (data[0] === MSG_SESSION) {
+          try {
+            const msg = JSON.parse(new TextDecoder().decode(data.slice(1)));
+            if (msg.sessionID) sessionId = msg.sessionID;
+          } catch (e) {}
+          return;
+        }
+        if (data[0] === MSG_DATA) {
+          term.write(data.slice(1));
+          markUnread(tabId);
+          if (document.hidden) {
+            const now = Date.now();
+            if (now - lastOutputTime > 2000 && Notification.permission === 'granted') {
+              new Notification('Zeno', { body: 'Command completed', icon: '/favicon.svg' });
+            }
+            lastOutputTime = now;
+          } else {
+            lastOutputTime = Date.now();
+          }
+        }
+      };
 
-    ws.onopen = () => {
-      requestAnimationFrame(() => {
-        fitAddon.fit();
-        sendResize(ws, term.cols, term.rows);
-        term.focus();
-      });
-    };
-    ws.onclose = () => {
-      const r = getPane(paneId);
-      if (r && !r.closed) term.write('\r\n\x1b[1;31m[Session ended]\x1b[0m\r\n');
-    };
-    ws.onerror = () => {};
+      term.onData((data) => sendData(currentWs, data));
+      term.onBinary((data) => sendBinary(currentWs, data));
+      term.onTitleChange((title) => { if (title) setTabTitle(tabId, title); });
 
-    registerPane(paneId, { term, fitAddon, searchAddon, ws, el: terminalEl, closed: false, toggleSearch: () => { searchVisible = !searchVisible; } });
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        sendSessionConnect(ws, sessionId);
+        requestAnimationFrame(() => {
+          fitAddon.fit();
+          sendResize(ws, term.cols, term.rows);
+          term.focus();
+        });
+      };
+
+      ws.onclose = () => {
+        const r = getPane(paneId);
+        if (r && !r.closed && reconnectAttempts < 5) {
+          reconnectAttempts++;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 8000);
+          term.write(`\r\n\x1b[33m[Reconnecting in ${delay/1000}s...]\x1b[0m\r\n`);
+          setTimeout(() => {
+            if (r && !r.closed) connectWs();
+          }, delay);
+        } else if (r && !r.closed) {
+          term.write('\r\n\x1b[1;31m[Session ended]\x1b[0m\r\n');
+        }
+      };
+      ws.onerror = () => {};
+
+      return ws;
+    }
+
+    const ws = connectWs();
+
+    registerPane(paneId, { term, fitAddon, searchAddon, ws: currentWs, el: terminalEl, closed: false, sessionId: '', toggleSearch: () => { searchVisible = !searchVisible; }, getWs: () => currentWs });
 
     // Custom scrollbar tracking
     setupScrollbar(term);
@@ -210,7 +250,7 @@
       // Refit after font size change so terminal recalculates cols/rows
       requestAnimationFrame(() => {
         r.fitAddon.fit();
-        sendResize(r.ws, r.term.cols, r.term.rows);
+        sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows);
       });
     }
   });
@@ -219,10 +259,17 @@
   $effect(() => {
     const r = getPane(paneId);
     if (r) {
+      r.term.options.fontFamily = `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`;
+      requestAnimationFrame(() => { r.fitAddon.fit(); sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows); });
+    }
+  });
+  $effect(() => {
+    const r = getPane(paneId);
+    if (r) {
       r.term.options.lineHeight = themeState.lineHeight;
       requestAnimationFrame(() => {
         r.fitAddon.fit();
-        sendResize(r.ws, r.term.cols, r.term.rows);
+        sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows);
       });
     }
   });

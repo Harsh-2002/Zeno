@@ -1,13 +1,14 @@
 <script>
   import { THEMES } from '../lib/constants/themes.js';
   import {
-    themeState, setTheme, setFontSize, setCursorStyle,
-    setCursorBlink, setLineHeight, setScrollback, setCopyOnSelect
+    themeState, setTheme, setFontSize, setFontFamily, setFontLigatures,
+    setCursorStyle, setCursorBlink, setLineHeight, setScrollback, setCopyOnSelect
   } from '../lib/stores/theme.svelte.js';
 
   let { visible = false, onClose } = $props();
 
   const themeKeys = Object.keys(THEMES);
+  const fontFamilies = ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Menlo', 'Monaco', 'Courier New'];
   const cursorStyles = ['block', 'underline', 'bar'];
   const lineHeights = [1.0, 1.1, 1.2, 1.3, 1.4];
   const scrollbackOptions = [10000, 50000, 100000, 500000];
@@ -33,6 +34,15 @@
         <select class="control" value={themeState.themeId} onchange={(e) => setTheme(e.target.value)}>
           {#each themeKeys as key}
             <option value={key}>{THEMES[key].name}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="row">
+        <span class="label">Font</span>
+        <select class="control" value={themeState.fontFamily} onchange={(e) => setFontFamily(e.target.value)}>
+          {#each fontFamilies as f}
+            <option value={f}>{f}</option>
           {/each}
         </select>
       </label>
@@ -63,6 +73,12 @@
         <span class="label">Cursor Blink</span>
         <input type="checkbox" class="toggle" checked={themeState.cursorBlink}
           onchange={(e) => setCursorBlink(e.target.checked)} />
+      </label>
+
+      <label class="row">
+        <span class="label">Ligatures</span>
+        <input type="checkbox" class="toggle" checked={themeState.fontLigatures}
+          onchange={(e) => setFontLigatures(e.target.checked)} />
       </label>
 
       <label class="row">

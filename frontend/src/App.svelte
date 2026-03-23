@@ -104,6 +104,11 @@
   $effect(() => { if (tabState.activeTabId) setTimeout(fitActiveTab, 20); });
 
   onMount(() => {
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      document.addEventListener('click', () => Notification.requestPermission(), { once: true });
+    }
+
     let resizeTimer;
     const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(fitActiveTab, 100); };
     window.addEventListener('resize', onResize);

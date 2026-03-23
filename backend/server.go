@@ -7,11 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,8 +25,9 @@ import (
 var frontendFS embed.FS
 
 const (
-	msgData   byte = 0x00
-	msgResize byte = 0x01
+	msgData    byte = 0x00
+	msgResize  byte = 0x01
+	msgSession byte = 0x02
 
 	pongWait   = 60 * time.Second
 	pingPeriod = 30 * time.Second
@@ -41,8 +44,9 @@ type resizeMsg struct {
 type server struct {
 	command  string
 	args     []string
-	secret string
+	secret   string
 	config   *Config
+	sessions *SessionManager
 	mux      *http.ServeMux
 
 	authMu     sync.Mutex
@@ -59,8 +63,9 @@ func newServer(command string, args []string, secret string, config *Config) *se
 	s := &server{
 		command:    command,
 		args:       args,
-		secret:    secret,
+		secret:     secret,
 		config:     config,
+		sessions:   newSessionManager(command, args, 60*time.Second),
 		authTokens: make(map[string]time.Time),
 	}
 	s.mux = http.NewServeMux()
@@ -73,6 +78,8 @@ func newServer(command string, args []string, secret string, config *Config) *se
 	s.mux.HandleFunc("/login", s.handleLogin)
 	s.mux.HandleFunc("/auth", s.handleAuth)
 	s.mux.HandleFunc("/api/config", s.authWrapFunc(s.handleConfig))
+	s.mux.HandleFunc("/api/upload", s.authWrapFunc(s.handleUpload))
+	s.mux.HandleFunc("/api/download", s.authWrapFunc(s.handleDownload))
 	s.mux.Handle("/", s.authWrap(http.FileServer(http.FS(frontendSub))))
 	s.mux.HandleFunc("/ws", s.authWrapFunc(s.handleWS))
 
@@ -242,6 +249,13 @@ button:hover{background:#0098ff}
 
 // ─── WebSocket Handler ─────────────────────────────────────
 
+// ─── WebSocket Handler (Session-based) ─────────────────────
+
+type sessionMsg struct {
+	Action    string `json:"action"`
+	SessionID string `json:"sessionID"`
+}
+
 func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -249,74 +263,64 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command(s.command, s.args...)
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
-	ptmx, err := pty.Start(cmd)
-	if err != nil {
-		log.Printf("PTY start error: %v", err)
-		conn.Close()
-		return
-	}
-
-	var closeOnce sync.Once
-	cleanup := func() {
-		closeOnce.Do(func() {
-			conn.Close()
-			ptmx.Close()
-			if cmd.Process != nil {
-				cmd.Process.Kill()
-				cmd.Wait()
-			}
-		})
-	}
-	defer cleanup()
-
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
-	var writeMu sync.Mutex
+	// Read first message — expect session connect
+	_, firstMsg, err := conn.ReadMessage()
+	if err != nil {
+		conn.Close()
+		return
+	}
 
-	// PTY -> WebSocket
-	go func() {
-		defer cleanup()
+	var session *Session
 
-		buf := make([]byte, readBufSize)
-		writeBuf := make([]byte, writeBufSize)
-		writeBuf[0] = msgData
-
-		ticker := time.NewTicker(pingPeriod)
-		defer ticker.Stop()
-
-		go func() {
-			for range ticker.C {
-				writeMu.Lock()
-				err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(10*time.Second))
-				writeMu.Unlock()
-				if err != nil {
-					return
-				}
-			}
-		}()
-
-		for {
-			n, err := ptmx.Read(buf)
-			if err != nil {
-				return
-			}
-			copy(writeBuf[1:], buf[:n])
-			writeMu.Lock()
-			err = conn.WriteMessage(websocket.BinaryMessage, writeBuf[:n+1])
-			writeMu.Unlock()
-			if err != nil {
-				return
-			}
+	if len(firstMsg) > 0 && firstMsg[0] == msgSession {
+		var sm sessionMsg
+		if err := json.Unmarshal(firstMsg[1:], &sm); err == nil && sm.SessionID != "" {
+			session = s.sessions.Get(sm.SessionID)
 		}
+	}
+
+	// Create new session if not reconnecting
+	if session == nil {
+		session, err = s.sessions.Create()
+		if err != nil {
+			log.Printf("Session create error: %v", err)
+			conn.Close()
+			return
+		}
+	}
+
+	// Add this client
+	session.AddClient(conn)
+
+	// Replay ring buffer for reconnecting clients
+	session.ReplayTo(conn)
+
+	// Send session ID back
+	resp, _ := json.Marshal(sessionMsg{Action: "session", SessionID: session.ID})
+	respMsg := make([]byte, len(resp)+1)
+	respMsg[0] = msgSession
+	copy(respMsg[1:], resp)
+	session.clientMu.Lock()
+	mu := session.writeMus[conn]
+	session.clientMu.Unlock()
+	if mu != nil {
+		mu.Lock()
+		conn.WriteMessage(websocket.BinaryMessage, respMsg)
+		mu.Unlock()
+	}
+
+	// WebSocket → PTY
+	defer func() {
+		session.RemoveClient(conn)
+		conn.Close()
 	}()
 
-	// WebSocket -> PTY
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -327,7 +331,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 		switch message[0] {
 		case msgData:
-			if _, err := ptmx.Write(message[1:]); err != nil {
+			if _, err := session.ptmx.Write(message[1:]); err != nil {
 				return
 			}
 		case msgResize:
@@ -336,10 +340,99 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Resize parse error: %v", err)
 				continue
 			}
-			pty.Setsize(ptmx, &pty.Winsize{
-				Rows: size.Rows,
-				Cols: size.Cols,
-			})
+			session.cols = size.Cols
+			session.rows = size.Rows
+			pty.Setsize(session.ptmx, &pty.Winsize{Rows: size.Rows, Cols: size.Cols})
 		}
 	}
+}
+
+// ─── File Upload/Download ──────────────────────────────────
+
+func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := r.URL.Query().Get("session")
+	session := s.sessions.Get(sessionID)
+	if session == nil {
+		http.Error(w, "Invalid session", http.StatusBadRequest)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 100<<20) // 100MB limit
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		http.Error(w, "File too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Bad upload", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	cwd, err := getProcessCwd(session.cmd.Process.Pid)
+	if err != nil {
+		cwd = "."
+	}
+
+	filename := filepath.Base(header.Filename)
+	if filename == ".." || filename == "." {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
+	destPath := filepath.Join(cwd, filename)
+	dst, err := os.Create(destPath)
+	if err != nil {
+		http.Error(w, "Failed to create file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	written, err := io.Copy(dst, file)
+	if err != nil {
+		http.Error(w, "Failed to write file", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"name": filename,
+		"size": written,
+		"path": destPath,
+	})
+}
+
+func (s *server) handleDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := r.URL.Query().Get("session")
+	session := s.sessions.Get(sessionID)
+	if session == nil {
+		http.Error(w, "Invalid session", http.StatusBadRequest)
+		return
+	}
+
+	filePath := r.URL.Query().Get("path")
+	if filePath == "" || strings.Contains(filePath, "..") {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	cwd, err := getProcessCwd(session.cmd.Process.Pid)
+	if err != nil {
+		cwd = "."
+	}
+
+	fullPath := filepath.Join(cwd, filePath)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(fullPath)))
+	http.ServeFile(w, r, fullPath)
 }

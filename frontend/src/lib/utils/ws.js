@@ -1,7 +1,8 @@
 const MSG_DATA = 0x00;
 const MSG_RESIZE = 0x01;
+const MSG_SESSION = 0x02;
 
-export { MSG_DATA, MSG_RESIZE };
+export { MSG_DATA, MSG_RESIZE, MSG_SESSION };
 
 export function createWebSocket() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -33,6 +34,16 @@ export function sendResize(ws, cols, rows) {
   const enc = new TextEncoder().encode(payload);
   const msg = new Uint8Array(enc.length + 1);
   msg[0] = MSG_RESIZE;
+  msg.set(enc, 1);
+  ws.send(msg);
+}
+
+export function sendSessionConnect(ws, sessionId) {
+  if (ws.readyState !== WebSocket.OPEN) return;
+  const payload = JSON.stringify({ action: 'connect', sessionID: sessionId || '' });
+  const enc = new TextEncoder().encode(payload);
+  const msg = new Uint8Array(enc.length + 1);
+  msg[0] = MSG_SESSION;
   msg.set(enc, 1);
   ws.send(msg);
 }

@@ -49,6 +49,10 @@ html, body, #app {
 body { display: flex; flex-direction: column; }
 #app { display: flex; flex-direction: column; }
 
+/* Font ligatures — toggled via .ligatures class on <html> */
+.ligatures .xterm { font-feature-settings: "liga" 1, "calt" 1; }
+html:not(.ligatures) .xterm { font-feature-settings: "liga" 0, "calt" 0; }
+
 /* Custom scrollbar — hide native, show only on hover */
 .xterm .xterm-viewport {
   scrollbar-width: none; /* Firefox */
