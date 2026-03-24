@@ -40,7 +40,7 @@
   <div class="tab-bar-btn" onclick={createTab} title="New Tab">+</div>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="tab-bar-btn" onclick={onOpenFiles} title="Files">&#x1F4C1;</div>
+  <div class="tab-bar-btn" onclick={onOpenFiles} title="Files"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h4.5l1.5 1.5H14v8H2z"/><path d="M2 3.5V2.5h4l1.5 1"/></svg></div>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="tab-bar-btn" onclick={onOpenSettings} title="Settings">&#x2699;</div>

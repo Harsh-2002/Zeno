@@ -86,7 +86,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div class="overlay" onclick={onClose}></div>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="file-panel"
+  <div class="file-panel" oncontextmenu={(e) => e.stopPropagation()}
     ondragenter={handleDragEnter} ondragleave={handleDragLeave}
     ondragover={handleDragOver} ondrop={handleDrop}>
     <div class="header">
@@ -99,8 +99,9 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="breadcrumb" onclick={navigateUp}>
       {#if currentPath !== '.'}
-        <span class="back">&larr;</span>
+        <span class="back"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></span>
       {/if}
+      <svg class="breadcrumb-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h4.5l1.5 1.5H14v8H2z"/></svg>
       <span class="path">{shortenPath(fullPath)}</span>
     </div>
 
@@ -114,7 +115,13 @@
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="file-row" onclick={() => entry.isDir ? navigateTo(entry.name) : downloadFile(entry.name)}>
-            <span class="file-icon">{entry.isDir ? '📁' : '📄'}</span>
+            <span class="file-icon">
+              {#if entry.isDir}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h4.5l1.5 1.5H14v8H2z"/></svg>
+              {:else}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5l4 4v9H4z"/><path d="M9 1.5v4h4"/></svg>
+              {/if}
+            </span>
             <span class="file-name">{entry.name}</span>
             {#if !entry.isDir}
               <span class="file-size">{formatSize(entry.size)}</span>
@@ -125,7 +132,8 @@
     </div>
 
     <div class="upload-zone" class:active={dropActive}>
-      {dropActive ? 'Drop to upload' : 'Drag files here to upload'}
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10V3"/><path d="M5 5l3-3 3 3"/><path d="M2 11v2h12v-2"/></svg>
+      <span>{dropActive ? 'Drop to upload' : 'Drag files here'}</span>
     </div>
   </div>
 {/if}
@@ -171,7 +179,8 @@
     min-height: 32px;
   }
   .breadcrumb:hover { background: var(--bg-hover); }
-  .back { font-size: 14px; }
+  .breadcrumb-icon { flex-shrink: 0; }
+  .back { display: flex; flex-shrink: 0; }
   .path { overflow: hidden; text-overflow: ellipsis; }
 
   .file-list {
@@ -197,7 +206,8 @@
   }
 
   .upload-zone {
-    padding: 12px 16px; text-align: center;
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
     color: var(--text-dim); font-size: 11px;
     border-top: 1px solid var(--border);
     transition: all 0.15s;
