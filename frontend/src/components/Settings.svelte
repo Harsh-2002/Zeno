@@ -138,7 +138,7 @@
     background: var(--bg-secondary);
     border-left: 1px solid var(--border);
     display: flex; flex-direction: column;
-    box-shadow: -4px 0 24px var(--shadow);
+    box-shadow: -2px 0 8px rgba(0,0,0,0.15);
     animation: slide-in 0.15s ease;
   }
   @keyframes slide-in {
