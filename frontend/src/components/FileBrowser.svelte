@@ -7,9 +7,18 @@
   let loading = $state(false);
   let dropActive = $state(false);
   let dragCounter = 0;
+  let menuEntry = $state(null);
+  let menuPos = $state({ x: 0, y: 0 });
+  let renamingEntry = $state(null);
+  let renameValue = $state('');
+  let renameInputEl = $state(null);
 
   $effect(() => {
     if (visible && sessionId) loadDir('.');
+  });
+
+  $effect(() => {
+    if (renamingEntry && renameInputEl) { renameInputEl.focus(); renameInputEl.select(); }
   });
 
   async function loadDir(path) {
@@ -60,6 +69,48 @@
     const home = p.match(/^\/Users\/[^/]+/)?.[0] || p.match(/^\/home\/[^/]+/)?.[0];
     if (home) return '~' + p.slice(home.length);
     return p;
+  }
+
+  function openMenu(e, entry) {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    menuEntry = entry;
+    menuPos = { x: rect.right - 140, y: rect.bottom + 2 };
+  }
+
+  function closeMenu() { menuEntry = null; }
+
+  function startRename(entry) {
+    closeMenu();
+    renamingEntry = entry;
+    renameValue = entry.name;
+  }
+
+  async function doRename() {
+    if (!renamingEntry || !renameValue.trim() || renameValue === renamingEntry.name) {
+      renamingEntry = null;
+      return;
+    }
+    const filePath = currentPath === '.' ? renamingEntry.name : `${currentPath}/${renamingEntry.name}`;
+    try {
+      await fetch(`/api/rename?session=${sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: filePath, newName: renameValue.trim() })
+      });
+    } catch (e) {}
+    renamingEntry = null;
+    loadDir(currentPath);
+  }
+
+  async function doDelete(entry) {
+    closeMenu();
+    if (!confirm(`Delete "${entry.name}"?`)) return;
+    const filePath = currentPath === '.' ? entry.name : `${currentPath}/${entry.name}`;
+    try {
+      await fetch(`/api/delete?session=${sessionId}&path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
+    } catch (e) {}
+    loadDir(currentPath);
   }
 
   function handleDragEnter(e) { e.preventDefault(); dragCounter++; dropActive = true; }
@@ -114,7 +165,7 @@
         {#each entries as entry}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="file-row" onclick={() => entry.isDir ? navigateTo(entry.name) : downloadFile(entry.name)}>
+          <div class="file-row" onclick={() => { if (renamingEntry !== entry) { entry.isDir ? navigateTo(entry.name) : downloadFile(entry.name); } }}>
             <span class="file-icon">
               {#if entry.isDir}
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h4.5l1.5 1.5H14v8H2z"/></svg>
@@ -122,12 +173,43 @@
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5l4 4v9H4z"/><path d="M9 1.5v4h4"/></svg>
               {/if}
             </span>
-            <span class="file-name">{entry.name}</span>
-            {#if !entry.isDir}
-              <span class="file-size">{formatSize(entry.size)}</span>
+            {#if renamingEntry === entry}
+              <input class="rename-input" bind:this={renameInputEl} bind:value={renameValue}
+                onclick={(e) => e.stopPropagation()}
+                onblur={doRename}
+                onkeydown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { renamingEntry = null; } e.stopPropagation(); }} />
+            {:else}
+              <span class="file-name">{entry.name}</span>
+              {#if !entry.isDir}
+                <span class="file-size">{formatSize(entry.size)}</span>
+              {/if}
             {/if}
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="file-menu-btn" onclick={(e) => openMenu(e, entry)}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg>
+            </span>
           </div>
         {/each}
+
+        {#if menuEntry}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="file-menu-overlay" onclick={closeMenu}></div>
+          <div class="file-menu" style="left:{menuPos.x}px; top:{menuPos.y}px">
+            {#if !menuEntry.isDir}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="file-menu-item" onclick={() => { downloadFile(menuEntry.name); closeMenu(); }}>Download</div>
+            {/if}
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="file-menu-item" onclick={() => startRename(menuEntry)}>Rename</div>
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="file-menu-item danger" onclick={() => doDelete(menuEntry)}>Delete</div>
+          </div>
+        {/if}
       {/if}
     </div>
 
@@ -199,6 +281,37 @@
   .file-icon { font-size: 14px; flex-shrink: 0; }
   .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-size { color: var(--text-dim); font-size: 11px; font-family: var(--font-mono); flex-shrink: 0; }
+
+  .file-menu-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: var(--radius-xs);
+    color: var(--text-dim); cursor: pointer; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.1s, background 0.1s;
+  }
+  .file-row:hover .file-menu-btn { opacity: 0.6; }
+  .file-menu-btn:hover { opacity: 1 !important; background: var(--bg-hover); }
+
+  .rename-input {
+    flex: 1; min-width: 0;
+    background: var(--bg-hover); color: var(--text-primary);
+    border: 1px solid var(--border-focus); border-radius: 3px;
+    padding: 1px 6px; font-size: 13px; font-family: inherit; outline: none;
+  }
+
+  .file-menu-overlay { position: fixed; inset: 0; z-index: 960; }
+  .file-menu {
+    position: fixed; z-index: 970;
+    background: var(--surface-overlay); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 3px 0; min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .file-menu-item {
+    padding: 5px 12px; font-size: 12px; color: var(--text-primary);
+    cursor: pointer; transition: background 0.08s;
+  }
+  .file-menu-item:hover { background: var(--bg-hover); }
+  .file-menu-item.danger { color: var(--danger); }
+  .file-menu-item.danger:hover { background: var(--danger); color: #fff; }
 
   .empty {
     padding: 24px 16px; text-align: center;

@@ -81,6 +81,8 @@ func newServer(command string, args []string, secret string, config *Config) *se
 	s.mux.HandleFunc("/api/files", s.authWrapFunc(s.handleFiles))
 	s.mux.HandleFunc("/api/upload", s.authWrapFunc(s.handleUpload))
 	s.mux.HandleFunc("/api/download", s.authWrapFunc(s.handleDownload))
+	s.mux.HandleFunc("/api/rename", s.authWrapFunc(s.handleRename))
+	s.mux.HandleFunc("/api/delete", s.authWrapFunc(s.handleDelete))
 	s.mux.Handle("/", s.authWrap(http.FileServer(http.FS(frontendSub))))
 	s.mux.HandleFunc("/ws", s.authWrapFunc(s.handleWS))
 
@@ -511,4 +513,82 @@ func (s *server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	fullPath := filepath.Join(cwd, filePath)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(fullPath)))
 	http.ServeFile(w, r, fullPath)
+}
+
+func (s *server) handleRename(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := r.URL.Query().Get("session")
+	session := s.sessions.Get(sessionID)
+	if session == nil {
+		http.Error(w, "Invalid session", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Path    string `json:"path"`
+		NewName string `json:"newName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if body.Path == "" || body.NewName == "" ||
+		strings.Contains(body.Path, "..") || strings.Contains(body.NewName, "..") ||
+		filepath.IsAbs(body.Path) || filepath.IsAbs(body.NewName) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	cwd, err := getProcessCwd(session.cmd.Process.Pid)
+	if err != nil {
+		cwd = "."
+	}
+
+	oldPath := filepath.Join(cwd, body.Path)
+	newPath := filepath.Join(filepath.Dir(oldPath), filepath.Base(body.NewName))
+
+	if err := os.Rename(oldPath, newPath); err != nil {
+		http.Error(w, "Rename failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *server) handleDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := r.URL.Query().Get("session")
+	session := s.sessions.Get(sessionID)
+	if session == nil {
+		http.Error(w, "Invalid session", http.StatusBadRequest)
+		return
+	}
+
+	filePath := r.URL.Query().Get("path")
+	if filePath == "" || strings.Contains(filePath, "..") || filepath.IsAbs(filePath) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	cwd, err := getProcessCwd(session.cmd.Process.Pid)
+	if err != nil {
+		cwd = "."
+	}
+
+	fullPath := filepath.Join(cwd, filePath)
+	if err := os.RemoveAll(fullPath); err != nil {
+		http.Error(w, "Delete failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
