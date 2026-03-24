@@ -120,7 +120,6 @@
 
     let sessionId = '';
     let reconnectAttempts = 0;
-    let lastOutputTime = 0;
     let currentWs = null;
 
     function connectWs() {
@@ -144,15 +143,6 @@
         if (data[0] === MSG_DATA) {
           term.write(data.slice(1));
           markUnread(tabId);
-          if (document.hidden) {
-            const now = Date.now();
-            if (now - lastOutputTime > 2000 && Notification.permission === 'granted') {
-              new Notification('Zeno', { body: 'Command completed', icon: '/favicon.svg' });
-            }
-            lastOutputTime = now;
-          } else {
-            lastOutputTime = Date.now();
-          }
         }
       };
 
