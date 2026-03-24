@@ -78,6 +78,7 @@ func newServer(command string, args []string, secret string, config *Config) *se
 	s.mux.HandleFunc("/login", s.handleLogin)
 	s.mux.HandleFunc("/auth", s.handleAuth)
 	s.mux.HandleFunc("/api/config", s.authWrapFunc(s.handleConfig))
+	s.mux.HandleFunc("/api/files", s.authWrapFunc(s.handleFiles))
 	s.mux.HandleFunc("/api/upload", s.authWrapFunc(s.handleUpload))
 	s.mux.HandleFunc("/api/download", s.authWrapFunc(s.handleDownload))
 	s.mux.Handle("/", s.authWrap(http.FileServer(http.FS(frontendSub))))
@@ -348,7 +349,75 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ─── File Upload/Download ──────────────────────────────────
+// ─── File Browser / Upload / Download ──────────────────────
+
+type fileEntry struct {
+	Name  string `json:"name"`
+	IsDir bool   `json:"isDir"`
+	Size  int64  `json:"size"`
+}
+
+type fileListing struct {
+	Path    string      `json:"path"`
+	Entries []fileEntry `json:"entries"`
+}
+
+func (s *server) handleFiles(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := r.URL.Query().Get("session")
+	session := s.sessions.Get(sessionID)
+	if session == nil {
+		http.Error(w, "Invalid session", http.StatusBadRequest)
+		return
+	}
+
+	cwd, err := getProcessCwd(session.cmd.Process.Pid)
+	if err != nil {
+		cwd = "."
+	}
+
+	reqPath := r.URL.Query().Get("path")
+	if reqPath == "" {
+		reqPath = "."
+	}
+	if strings.Contains(reqPath, "..") || filepath.IsAbs(reqPath) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	fullPath := filepath.Join(cwd, reqPath)
+	dirEntries, err := os.ReadDir(fullPath)
+	if err != nil {
+		http.Error(w, "Cannot read directory", http.StatusInternalServerError)
+		return
+	}
+
+	entries := make([]fileEntry, 0, len(dirEntries))
+	// Folders first
+	for _, e := range dirEntries {
+		if e.IsDir() {
+			entries = append(entries, fileEntry{Name: e.Name(), IsDir: true})
+		}
+	}
+	// Then files
+	for _, e := range dirEntries {
+		if !e.IsDir() {
+			info, _ := e.Info()
+			size := int64(0)
+			if info != nil {
+				size = info.Size()
+			}
+			entries = append(entries, fileEntry{Name: e.Name(), IsDir: false, Size: size})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(fileListing{Path: fullPath, Entries: entries})
+}
 
 func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -379,6 +448,12 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	cwd, err := getProcessCwd(session.cmd.Process.Pid)
 	if err != nil {
 		cwd = "."
+	}
+
+	// Optional subpath for uploading into subdirectories
+	subPath := r.URL.Query().Get("path")
+	if subPath != "" && !strings.Contains(subPath, "..") && !filepath.IsAbs(subPath) {
+		cwd = filepath.Join(cwd, subPath)
 	}
 
 	filename := filepath.Base(header.Filename)

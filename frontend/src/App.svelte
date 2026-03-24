@@ -4,6 +4,7 @@
   import TerminalArea from './components/TerminalArea.svelte';
   import ContextMenu from './components/ContextMenu.svelte';
   import Settings from './components/Settings.svelte';
+  import FileBrowser from './components/FileBrowser.svelte';
   import Toast from './components/Toast.svelte';
   import { tabState, createTab, closeTab, switchToTab, switchRelative, getActiveTab } from './lib/stores/tabs.svelte.js';
   import { themeState, setTheme, setFontSize, applyThemeCSS, loadConfig } from './lib/stores/theme.svelte.js';
@@ -17,6 +18,7 @@
   let toastTimer = null;
   let contextMenu = $state({ visible: false, x: 0, y: 0 });
   let settingsVisible = $state(false);
+  let fileBrowserVisible = $state(false);
 
   function showToast(msg) {
     toastMessage = msg; toastVisible = true;
@@ -72,6 +74,7 @@
   function handleContextAction(action, data) {
     const pane = getPane(paneState.focusedPaneId);
     if (action === 'settings') { settingsVisible = true; return; }
+    if (action === 'browseFiles') { fileBrowserVisible = true; return; }
     if (action === 'closePane') { closePane(); return; }
     if (!pane) return;
     switch (action) {
@@ -111,6 +114,15 @@
     settingsVisible = !settingsVisible;
   }
 
+  function handleFileBrowserOpen() {
+    fileBrowserVisible = !fileBrowserVisible;
+  }
+
+  function getActiveSessionId() {
+    const pane = getPane(paneState.focusedPaneId);
+    return pane?.sessionId || '';
+  }
+
   $effect(() => { applyThemeCSS(themeState.themeId); });
   $effect(() => {
     const tab = tabState.tabs.find(t => t.id === tabState.activeTabId);
@@ -138,7 +150,7 @@
       if (mod && e.key === '-') { e.preventDefault(); setFontSize(themeState.fontSize - 1); showToast(`Font size: ${themeState.fontSize}px`); setTimeout(fitActiveTab, 50); return; }
       if (mod && e.key === '0') { e.preventDefault(); setFontSize(14); showToast('Font size: 14px'); setTimeout(fitActiveTab, 50); return; }
       if (mod && e.key === ',') { e.preventDefault(); settingsVisible = !settingsVisible; return; }
-      if (e.key === 'Escape') { contextMenu.visible = false; settingsVisible = false; }
+      if (e.key === 'Escape') { contextMenu.visible = false; settingsVisible = false; fileBrowserVisible = false; }
     };
     window.addEventListener('keydown', onKeyDown);
 
@@ -166,11 +178,12 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="app" oncontextmenu={handleContextMenu}>
-  <TabBar onOpenSettings={handleSettingsOpen} />
+  <TabBar onOpenSettings={handleSettingsOpen} onOpenFiles={handleFileBrowserOpen} />
   <TerminalArea onClosePane={(paneId) => { setFocusedPane(paneId); closePane(); }} />
   <ContextMenu visible={contextMenu.visible} x={contextMenu.x} y={contextMenu.y}
     onAction={handleContextAction} onClose={() => contextMenu.visible = false} />
   <Settings visible={settingsVisible} onClose={() => settingsVisible = false} />
+  <FileBrowser visible={fileBrowserVisible} onClose={() => fileBrowserVisible = false} sessionId={getActiveSessionId()} />
   <Toast message={toastMessage} visible={toastVisible} />
 </div>
 

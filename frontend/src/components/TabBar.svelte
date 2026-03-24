@@ -2,7 +2,7 @@
   import Tab from './Tab.svelte';
   import { tabState, createTab, switchToTab, closeTab, reorderTabs, setTabTitle } from '../lib/stores/tabs.svelte.js';
 
-  let { onOpenSettings } = $props();
+  let { onOpenSettings, onOpenFiles } = $props();
   let draggingTabId = $state(null);
 
   function handleDrop(e, tabId) {
@@ -38,6 +38,9 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="tab-bar-btn" onclick={createTab} title="New Tab">+</div>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="tab-bar-btn" onclick={onOpenFiles} title="Files">&#x1F4C1;</div>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="tab-bar-btn" onclick={onOpenSettings} title="Settings">&#x2699;</div>

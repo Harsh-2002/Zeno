@@ -9,6 +9,7 @@
     { sep: true },
     { label: 'Clear Terminal', action: 'clear' },
     { label: 'Save Output', action: 'saveOutput' },
+    { label: 'Browse Files', action: 'browseFiles' },
     { label: 'Search', shortcut: shortcutLabel('F'), action: 'search' },
     { sep: true },
     { label: 'Split Vertical', shortcut: shortcutLabel('D'), action: 'splitV' },
