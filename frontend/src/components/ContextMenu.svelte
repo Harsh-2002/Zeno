@@ -8,6 +8,7 @@
     { label: 'Select All', action: 'selectAll' },
     { sep: true },
     { label: 'Clear Terminal', action: 'clear' },
+    { label: 'Save Output', action: 'saveOutput' },
     { label: 'Search', shortcut: shortcutLabel('F'), action: 'search' },
     { sep: true },
     { label: 'Split Vertical', shortcut: shortcutLabel('D'), action: 'splitV' },

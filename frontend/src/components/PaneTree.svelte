@@ -18,7 +18,7 @@
       if (r) {
         requestAnimationFrame(() => {
           r.fitAddon.fit();
-          sendResize(r.ws, r.term.cols, r.term.rows);
+          sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows);
         });
       }
     });

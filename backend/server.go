@@ -106,10 +106,11 @@ func (s *server) handleConfig(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
-		// Preserve server-only fields
+		configMu.Lock()
 		updated.Port = s.config.Port
 		updated.Shell = s.config.Shell
 		*s.config = updated
+		configMu.Unlock()
 		if err := saveConfig(updated); err != nil {
 			http.Error(w, "Failed to save config", http.StatusInternalServerError)
 			return
@@ -422,7 +423,7 @@ func (s *server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := r.URL.Query().Get("path")
-	if filePath == "" || strings.Contains(filePath, "..") {
+	if filePath == "" || strings.Contains(filePath, "..") || filepath.IsAbs(filePath) {
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}

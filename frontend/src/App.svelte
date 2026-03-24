@@ -29,7 +29,7 @@
     if (!tab) return;
     forEachPane(tab.rootNode, (pane) => {
       const r = getPane(pane.id);
-      if (r) { r.fitAddon.fit(); sendResize(r.ws, r.term.cols, r.term.rows); }
+      if (r) { r.fitAddon.fit(); sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows); }
     });
   }
 
@@ -76,9 +76,24 @@
     if (!pane) return;
     switch (action) {
       case 'copy': if (pane.term.hasSelection()) navigator.clipboard.writeText(pane.term.getSelection()); break;
-      case 'paste': navigator.clipboard.readText().then(t => sendData(pane.ws, t)); break;
+      case 'paste': navigator.clipboard.readText().then(t => sendData(pane.getWs ? pane.getWs() : pane.ws, t)); break;
       case 'selectAll': pane.term.selectAll(); break;
       case 'clear': pane.term.clear(); break;
+      case 'saveOutput': {
+        const buf = pane.term.buffer.active;
+        let text = '';
+        for (let i = 0; i < buf.length; i++) {
+          const line = buf.getLine(i);
+          if (line) text += line.translateToString(true) + '\n';
+        }
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'terminal-output.txt';
+        a.click(); URL.revokeObjectURL(url);
+        showToast('Output saved');
+        break;
+      }
       case 'search': if (pane.toggleSearch) pane.toggleSearch(); break;
       case 'splitV': splitPane('vertical'); break;
       case 'splitH': splitPane('horizontal'); break;
@@ -104,9 +119,13 @@
   $effect(() => { if (tabState.activeTabId) setTimeout(fitActiveTab, 20); });
 
   onMount(() => {
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      document.addEventListener('click', () => Notification.requestPermission(), { once: true });
+    // Request notification permission on first click
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      const requestPerm = () => {
+        Notification.requestPermission();
+        document.removeEventListener('click', requestPerm);
+      };
+      document.addEventListener('click', requestPerm);
     }
 
     let resizeTimer;

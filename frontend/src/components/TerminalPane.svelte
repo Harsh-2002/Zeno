@@ -133,7 +133,11 @@
         if (data[0] === MSG_SESSION) {
           try {
             const msg = JSON.parse(new TextDecoder().decode(data.slice(1)));
-            if (msg.sessionID) sessionId = msg.sessionID;
+            if (msg.sessionID) {
+              sessionId = msg.sessionID;
+              const res = getPane(paneId);
+              if (res) res.sessionId = sessionId;
+            }
           } catch (e) {}
           return;
         }
@@ -278,7 +282,21 @@
   function handleDragEnter(e) { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); dragCounter++; dropVisible = true; } }
   function handleDragLeave() { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropVisible = false; } }
   function handleDragOver(e) { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); }
-  function handleDrop(e) { e.preventDefault(); dragCounter = 0; dropVisible = false; }
+  function handleDrop(e) {
+    e.preventDefault(); dragCounter = 0; dropVisible = false;
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    const r = getPane(paneId);
+    const sid = r?.sessionId || '';
+    for (const file of files) {
+      const form = new FormData();
+      form.append('file', file);
+      fetch(`/api/upload?session=${sid}`, { method: 'POST', body: form })
+        .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+        .then(data => r?.term?.write(`\r\n\x1b[32m[Uploaded: ${data.name} (${(data.size/1024).toFixed(1)}KB)]\x1b[0m\r\n`))
+        .catch(err => r?.term?.write(`\r\n\x1b[31m[Upload failed: ${err}]\x1b[0m\r\n`));
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
