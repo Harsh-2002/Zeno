@@ -210,7 +210,7 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 	token := hex.EncodeToString(tokenBytes)
 
 	s.authMu.Lock()
-	s.authTokens[token] = time.Now().Add(24 * time.Hour)
+	s.authTokens[token] = time.Now().Add(1 * time.Hour)
 	s.authMu.Unlock()
 
 	http.SetCookie(w, &http.Cookie{
@@ -220,7 +220,7 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   s.useTLS,
 		SameSite: http.SameSiteStrictMode,
-		MaxAge:   86400,
+		// No MaxAge = session cookie — deleted when browser closes
 	})
 	http.Redirect(w, r, "/", http.StatusFound)
 }
