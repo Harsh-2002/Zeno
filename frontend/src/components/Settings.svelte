@@ -108,20 +108,6 @@
           onchange={(e) => setCopyOnSelect(e.target.checked)} />
       </label>
 
-      <div class="section-label">Server</div>
-
-      <div class="row info">
-        <span class="label">Port</span>
-        <span class="value">{themeState.port}</span>
-      </div>
-      <div class="row info">
-        <span class="label">Shell</span>
-        <span class="value">{themeState.shell}</span>
-      </div>
-      <div class="row info">
-        <span class="label">Config</span>
-        <span class="value mono">~/.zeno.toml</span>
-      </div>
     </div>
   </div>
 {/if}
