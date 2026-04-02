@@ -226,30 +226,62 @@ const loginHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Zeno — Login</title>
+<title>Zeno</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
 @font-face{font-family:'JetBrains Mono';src:url('/fonts/jetbrains-mono-regular.woff2') format('woff2');font-weight:400;font-display:swap}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%%;background:#1e1e1e;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
-.card{background:#252526;border:1px solid #3c3c3c;border-radius:12px;padding:40px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
-h1{color:#ccc;font-size:18px;font-weight:400;margin-bottom:8px;text-align:center}
-.subtitle{color:#666;font-size:12px;text-align:center;margin-bottom:28px}
-input{width:100%%;padding:10px 14px;background:#3c3c3c;border:1px solid #555;border-radius:6px;color:#ccc;font-size:14px;font-family:inherit;outline:none;margin-bottom:16px}
-input:focus{border-color:#007acc}
-button{width:100%%;padding:10px;background:#007acc;border:none;border-radius:6px;color:#fff;font-size:14px;font-family:inherit;cursor:pointer;transition:background 0.15s}
-button:hover{background:#0098ff}
-.error{color:#f14c4c;font-size:12px;text-align:center;margin-bottom:12px}
+html,body{height:100%%;background:#1a1a1a;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;overflow:hidden}
+.frame{width:420px;max-width:90vw;animation:appear .4s ease}
+@keyframes appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.terminal{background:#1e1e1e;border:1.5px solid #333;border-radius:10px;overflow:hidden}
+.titlebar{height:36px;background:#2d2d2d;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid #333;gap:7px}
+.dot{width:11px;height:11px;border-radius:50%%;border:1px solid rgba(255,255,255,0.06)}
+.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+.titlebar-text{flex:1;text-align:center;color:#666;font-size:11px;margin-right:40px}
+.body{padding:28px 24px 24px}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.logo svg{flex-shrink:0}
+.logo-text{color:#888;font-size:11px;letter-spacing:0.5px}
+.prompt{display:flex;align-items:center;gap:0;margin-bottom:6px}
+.prompt-symbol{color:#666;font-size:13px;padding:8px 0 8px 2px;flex-shrink:0}
+input{flex:1;background:transparent;border:none;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;padding:8px 8px;caret-color:#e0e0e0;letter-spacing:0.3px}
+input::placeholder{color:#444}
+.prompt-line{height:1px;background:#333;margin-bottom:16px}
+.actions{display:flex;align-items:center;justify-content:space-between}
+.hint{color:#444;font-size:10px}
+.hint kbd{color:#555;background:#2a2a2a;padding:1px 5px;border-radius:3px;border:1px solid #333;font-family:inherit;font-size:10px}
+button{background:transparent;border:1px solid #444;border-radius:6px;color:#888;font-size:11px;font-family:inherit;cursor:pointer;padding:6px 16px;transition:all .15s;letter-spacing:0.3px}
+button:hover{border-color:#666;color:#ccc}
+.error{color:#bf616a;font-size:11px;margin-bottom:12px;min-height:16px}
 </style>
 </head>
 <body>
-<div class="card">
-<h1>Zeno</h1>
-<p class="subtitle">Enter password to connect</p>
+<div class="frame">
+<div class="terminal">
+<div class="titlebar">
+<span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+<span class="titlebar-text">zeno</span>
+</div>
+<div class="body">
+<div class="logo">
+<svg width="28" height="28" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#2d2d2d"/><path d="M8 9h16v2.5L11.5 23H24v2.5H8V23l12.5-11.5H8z" fill="#888"/></svg>
+<span class="logo-text">TERMINAL ACCESS</span>
+</div>
 <div class="error">%s</div>
 <form method="POST" action="/auth">
-<input type="password" name="password" placeholder="Password" autofocus autocomplete="current-password" />
-<button type="submit">Connect</button>
+<div class="prompt">
+<span class="prompt-symbol">&#x276F;</span>
+<input type="password" name="password" placeholder="enter secret" autofocus autocomplete="current-password" />
+</div>
+<div class="prompt-line"></div>
+<div class="actions">
+<span class="hint">press <kbd>enter</kbd> to connect</span>
+<button type="submit">connect</button>
+</div>
 </form>
+</div>
+</div>
 </div>
 </body>
 </html>`
