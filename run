@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-PORT="${1:-8080}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+PORT="${1:-0}"
+
+# If no port specified or port 0, find a random available port
+if [ "$PORT" = "0" ]; then
+  PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()' 2>/dev/null || echo 8080)
+fi
 
 # Kill anything on this port
 if lsof -ti:"$PORT" >/dev/null 2>&1; then
-  echo "→ Killing process on port $PORT"
-  lsof -ti:"$PORT" | xargs kill -9 2>/dev/null || true
-  sleep 1
+  echo "→ Port $PORT in use, finding available port..."
+  PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()' 2>/dev/null || echo 9090)
 fi
 
 # Install frontend deps if needed
@@ -26,5 +30,5 @@ echo "→ Building backend..."
 (cd "$ROOT/backend" && go build -o "$ROOT/zeno" .)
 
 # Run
-echo "→ zeno on http://localhost:$PORT"
-exec "$ROOT/zeno" --port "$PORT" --tls --secret admin123 "${@:2}"
+echo "→ Zeno on http://localhost:$PORT"
+exec "$ROOT/zeno" --port "$PORT" "${@:2}"
