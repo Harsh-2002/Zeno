@@ -122,9 +122,15 @@
     let reconnectAttempts = 0;
     let currentWs = null;
 
+    // Register input handlers ONCE — they use currentWs which updates on reconnect
+    term.onData((data) => sendData(currentWs, data));
+    term.onBinary((data) => sendBinary(currentWs, data));
+    term.onTitleChange((title) => { if (title) setTabTitle(tabId, title); });
+
     function connectWs() {
       const ws = createWebSocket();
       currentWs = ws;
+      let isReconnect = reconnectAttempts > 0;
 
       ws.onmessage = (event) => {
         const data = new Uint8Array(event.data);
@@ -146,12 +152,12 @@
         }
       };
 
-      term.onData((data) => sendData(currentWs, data));
-      term.onBinary((data) => sendBinary(currentWs, data));
-      term.onTitleChange((title) => { if (title) setTabTitle(tabId, title); });
-
       ws.onopen = () => {
         reconnectAttempts = 0;
+        // On reconnect, reset terminal before ring buffer replay
+        if (isReconnect) {
+          term.reset();
+        }
         sendSessionConnect(ws, sessionId);
         requestAnimationFrame(() => {
           fitAddon.fit();
