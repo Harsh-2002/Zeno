@@ -135,4 +135,6 @@ export function applyThemeCSS(themeId) {
   r.setProperty('--match-bg', u.matchBg);
   r.setProperty('--match-active-bg', u.activeMatchBg);
   r.setProperty('--match-active-border', u.activeMatchBorder);
+  // Update browser chrome color
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.background);
 }

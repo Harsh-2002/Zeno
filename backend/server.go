@@ -45,6 +45,7 @@ type server struct {
 	command  string
 	args     []string
 	secret   string
+	useTLS   bool
 	config   *Config
 	sessions *SessionManager
 	mux      *http.ServeMux
@@ -59,11 +60,12 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func newServer(command string, args []string, secret string, config *Config) *server {
+func newServer(command string, args []string, secret string, useTLS bool, config *Config) *server {
 	s := &server{
 		command:    command,
 		args:       args,
 		secret:     secret,
+		useTLS:     useTLS,
 		config:     config,
 		sessions:   newSessionManager(command, args, 60*time.Second),
 		authTokens: make(map[string]time.Time),
@@ -77,6 +79,7 @@ func newServer(command string, args []string, secret string, config *Config) *se
 
 	s.mux.HandleFunc("/login", s.handleLogin)
 	s.mux.HandleFunc("/auth", s.handleAuth)
+	s.mux.HandleFunc("/api/logout", s.handleLogout)
 	s.mux.HandleFunc("/api/config", s.authWrapFunc(s.handleConfig))
 	s.mux.HandleFunc("/api/files", s.authWrapFunc(s.handleFiles))
 	s.mux.HandleFunc("/api/upload", s.authWrapFunc(s.handleUpload))
@@ -215,10 +218,30 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.useTLS,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   86400,
 	})
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func (s *server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("zeno-token")
+	if err == nil {
+		s.authMu.Lock()
+		delete(s.authTokens, cookie.Value)
+		s.authMu.Unlock()
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "zeno-token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   s.useTLS,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1,
+	})
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 const loginHTML = `<!DOCTYPE html>
@@ -226,6 +249,7 @@ const loginHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#1a1a1a">
 <title>Zeno</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>

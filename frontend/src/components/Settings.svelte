@@ -108,6 +108,11 @@
           onchange={(e) => setCopyOnSelect(e.target.checked)} />
       </label>
 
+      <div class="logout-section">
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <div class="logout-btn" onclick={() => { window.location.href = '/api/logout'; }}>Log out</div>
+      </div>
     </div>
   </div>
 {/if}
@@ -192,6 +197,18 @@
     color: var(--text-primary); font-family: var(--font-mono);
     background: transparent; padding: 0 4px;
   }
+
+  .logout-section {
+    padding: 16px 20px; margin-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .logout-btn {
+    text-align: center; padding: 8px; font-size: 12px;
+    color: var(--danger); cursor: pointer;
+    border: 1px solid var(--border); border-radius: var(--radius-xs);
+    transition: all 0.15s;
+  }
+  .logout-btn:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
   @media (max-width: 480px) { .panel { width: 100%; } }
 </style>

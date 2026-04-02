@@ -69,7 +69,7 @@ func main() {
 	}
 
 	addr := fmt.Sprintf(":%d", *port)
-	srv := newServer(command, args, *secret, &cfg)
+	srv := newServer(command, args, *secret, *useTLS, &cfg)
 	httpServer := &http.Server{
 		Addr:              addr,
 		Handler:           srv,
