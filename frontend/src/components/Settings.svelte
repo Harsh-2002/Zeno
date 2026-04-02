@@ -164,7 +164,7 @@
   }
   .row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 20px; min-height: 36px;
+    padding: 10px 20px; min-height: 40px;
   }
   .row.info { opacity: 0.7; }
   .label { font-size: 13px; color: var(--text-primary); }
@@ -173,38 +173,39 @@
   .control {
     color: var(--text-primary);
     border: 1px solid var(--border); border-radius: var(--radius-xs);
-    padding: 6px 32px 6px 10px; font-size: 13px; font-family: var(--font-ui);
-    outline: none; cursor: pointer; min-width: 110px;
+    padding: 7px 32px 7px 10px; font-size: 13px; font-family: var(--font-ui);
+    outline: none; cursor: pointer; min-width: 130px;
     appearance: none; -webkit-appearance: none;
     background: var(--bg-hover) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
   }
   .control:focus { border-color: var(--border-focus); }
   .toggle {
-    width: 36px; height: 20px; appearance: none; -webkit-appearance: none;
-    background: var(--border); border-radius: 10px; position: relative;
+    width: 40px; height: 22px; appearance: none; -webkit-appearance: none;
+    background: var(--border); border-radius: 11px; position: relative;
     cursor: pointer; transition: background 0.2s; border: none; outline: none;
+    flex-shrink: 0;
   }
   .toggle::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
+    content: ''; position: absolute; top: 3px; left: 3px;
     width: 16px; height: 16px; border-radius: 50%;
-    background: var(--text-primary); transition: transform 0.2s;
+    background: var(--text-muted); transition: transform 0.2s, background 0.2s;
   }
-  .toggle:checked { background: var(--border-focus); }
-  .toggle:checked::after { transform: translateX(16px); }
+  .toggle:checked { background: #4CAF50; }
+  .toggle:checked::after { transform: translateX(18px); background: #fff; }
   .stepper {
     display: flex; align-items: center; gap: 0;
     border: 1px solid var(--border); border-radius: var(--radius-xs);
-    overflow: hidden;
+    overflow: hidden; height: 32px;
   }
   .step-btn {
-    width: 28px; height: 28px; display: flex; align-items: center;
+    width: 32px; height: 100%; display: flex; align-items: center;
     justify-content: center; cursor: pointer; color: var(--text-primary);
     font-size: 14px; transition: background 0.1s;
     background: var(--bg-hover);
   }
   .step-btn:hover { background: var(--border-focus); }
   .step-val {
-    min-width: 44px; text-align: center; font-size: 13px;
+    min-width: 48px; text-align: center; font-size: 13px;
     color: var(--text-primary); font-family: var(--font-mono);
     background: transparent; padding: 0 4px;
   }
