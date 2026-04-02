@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Parse --config first (before loading config)
-	cfgPath := flag.String("config", "", "Config file path (default: ~/.zeno.yaml)")
+	cfgPath := flag.String("config", "", "Config file path (default: ~/.zeno.toml)")
 	port := flag.Int("port", 0, "HTTP server port")
 	shell := flag.String("shell", "", "Shell to run")
 	noOpen := flag.Bool("no-open", false, "Don't auto-open browser")

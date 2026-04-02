@@ -1,0 +1,11 @@
+theme = "dark"
+fontSize = 14
+fontFamily = "JetBrains Mono"
+fontLigatures = false
+cursorStyle = "block"
+cursorBlink = true
+lineHeight = 1.1
+scrollback = 100000
+copyOnSelect = false
+port = 8080
+shell = "/bin/zsh"

@@ -120,7 +120,7 @@
       </div>
       <div class="row info">
         <span class="label">Config</span>
-        <span class="value mono">~/.zeno.yaml</span>
+        <span class="value mono">~/.zeno.toml</span>
       </div>
     </div>
   </div>

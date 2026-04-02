@@ -22,7 +22,7 @@ Builds frontend + backend, opens browser at `http://localhost:8080`.
 - Password protection
 - SSH proxy mode
 - JetBrains Mono font
-- Config via `~/.zeno.yaml`
+- Config via `~/.zeno.toml`
 
 ## Usage
 
@@ -32,7 +32,7 @@ Builds frontend + backend, opens browser at `http://localhost:8080`.
 ./zeno --secret mysecret                # require auth
 ./zeno --tls                            # https with auto cert
 ./zeno --tls --cert my.crt --key my.key # custom cert
-./zeno --config ./zeno.yaml             # custom config path
+./zeno --config ./zeno.toml             # custom config path
 ./zeno ssh user@host                    # ssh proxy mode
 ```
 
@@ -51,18 +51,18 @@ Builds frontend + backend, opens browser at `http://localhost:8080`.
 
 ## Config
 
-All settings are stored in `~/.zeno.yaml` and editable from the Settings panel in the browser.
+All settings are stored in `~/.zeno.toml` and editable from the Settings panel in the browser.
 
-```yaml
-theme: dark
-fontSize: 14
-cursorStyle: block
-cursorBlink: true
-lineHeight: 1.1
-scrollback: 100000
-copyOnSelect: false
-port: 8080
-shell: /bin/zsh
+```toml
+theme = "dark"
+fontSize = 14
+cursorStyle = "block"
+cursorBlink = true
+lineHeight = 1.1
+scrollback = 100000
+copyOnSelect = false
+port = 8080
+shell = "/bin/zsh"
 ```
 
 ## Build from Source
