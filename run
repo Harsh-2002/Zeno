@@ -27,4 +27,4 @@ echo "→ Building backend..."
 
 # Run
 echo "→ zeno on http://localhost:$PORT"
-exec "$ROOT/zeno" --port "$PORT" "${@:2}"
+exec "$ROOT/zeno" --port "$PORT" --tls --secret admin123 "${@:2}"
