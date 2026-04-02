@@ -152,10 +152,7 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 20px; min-height: 40px;
   }
-  .row.info { opacity: 0.7; }
   .label { font-size: 13px; color: var(--text-primary); }
-  .value { font-size: 13px; color: var(--text-muted); }
-  .value.mono { font-family: var(--font-mono); font-size: 11px; }
   .control {
     color: var(--text-primary);
     border: 1px solid var(--border); border-radius: var(--radius-xs);
