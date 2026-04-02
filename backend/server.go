@@ -104,7 +104,12 @@ func (s *server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		configMu.RLock()
 		defer configMu.RUnlock()
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(s.config)
+		// Wrap config with auth status for frontend
+		resp := struct {
+			*Config
+			AuthEnabled bool `json:"authEnabled"`
+		}{s.config, s.secret != ""}
+		json.NewEncoder(w).Encode(resp)
 
 	case http.MethodPut:
 		var updated Config

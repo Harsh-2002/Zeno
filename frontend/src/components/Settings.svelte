@@ -108,11 +108,13 @@
           onchange={(e) => setCopyOnSelect(e.target.checked)} />
       </label>
 
-      <div class="logout-section">
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <div class="logout-btn" onclick={() => { window.location.href = '/api/logout'; }}>Log out</div>
-      </div>
+      {#if themeState.authEnabled}
+        <div class="logout-section">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <div class="logout-btn" onclick={() => { window.location.href = '/api/logout'; }}>Log out</div>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

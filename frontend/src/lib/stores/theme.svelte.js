@@ -13,6 +13,7 @@ export const themeState = $state({
   port: 8080,
   shell: '',
   layout: '',
+  authEnabled: false,
 });
 
 let saveTimer = null;
@@ -34,6 +35,7 @@ export async function loadConfig() {
     themeState.port = cfg.port || 8080;
     themeState.shell = cfg.shell || '';
     themeState.layout = cfg.layout || '';
+    themeState.authEnabled = cfg.authEnabled || false;
     applyThemeCSS(themeState.themeId);
   } catch (e) {
     // Fallback to defaults
