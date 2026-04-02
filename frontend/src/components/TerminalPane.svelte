@@ -58,7 +58,11 @@
       term.open(terminalEl);
       try { const wgl = new WebglAddon(); wgl.onContextLost(() => wgl.dispose()); term.loadAddon(wgl); } catch (e) {}
 
-      // Redirect incoming WS data to the new terminal (input handlers registered once below in fresh path)
+      // Wire new terminal to existing WebSocket
+      term.onData((data) => sendData(ws, data));
+      term.onBinary((data) => sendBinary(ws, data));
+      term.onTitleChange((title) => { if (title) setTabTitle(tabId, title); });
+
       ws.onmessage = (event) => {
         const d = new Uint8Array(event.data);
         if (d.length > 0 && d[0] === MSG_DATA) {
@@ -270,17 +274,17 @@
   $effect(() => { const r = getPane(paneId); if (r) r.term.options.theme = THEMES[themeState.themeId]; });
   $effect(() => {
     const r = getPane(paneId);
-    if (r) { r.term.options.fontSize = themeState.fontSize; requestAnimationFrame(() => fitPreserveScroll(r)); }
+    if (r) { r.term.options.fontSize = themeState.fontSize; setTimeout(() => fitPreserveScroll(r), 10); }
   });
   $effect(() => { const r = getPane(paneId); if (r) r.term.options.cursorStyle = themeState.cursorStyle; });
   $effect(() => { const r = getPane(paneId); if (r) r.term.options.cursorBlink = themeState.cursorBlink; });
   $effect(() => {
     const r = getPane(paneId);
-    if (r) { r.term.options.fontFamily = `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`; requestAnimationFrame(() => fitPreserveScroll(r)); }
+    if (r) { r.term.options.fontFamily = `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`; setTimeout(() => fitPreserveScroll(r), 10); }
   });
   $effect(() => {
     const r = getPane(paneId);
-    if (r) { r.term.options.lineHeight = themeState.lineHeight; requestAnimationFrame(() => fitPreserveScroll(r)); }
+    if (r) { r.term.options.lineHeight = themeState.lineHeight; setTimeout(() => fitPreserveScroll(r), 10); }
   });
 
   function handleMouseDown() { setFocusedPane(paneId); }

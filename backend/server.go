@@ -121,9 +121,11 @@ func (s *server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		configMu.Lock()
 		updated.Port = s.config.Port
 		updated.Shell = s.config.Shell
+		updated.Workspace = s.config.Workspace // preserve workspace
 		*s.config = updated
+		cfg := *s.config
 		configMu.Unlock()
-		if err := saveConfig(updated); err != nil {
+		if err := saveConfig(cfg); err != nil {
 			http.Error(w, "Failed to save config", http.StatusInternalServerError)
 			return
 		}
@@ -447,11 +449,12 @@ func (s *server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
-		// Store as JSON string in config
+		// Store workspace in config and save atomically
 		configMu.Lock()
 		s.config.Workspace = string(body)
+		cfg := *s.config
 		configMu.Unlock()
-		saveConfig(*s.config)
+		saveConfig(cfg)
 		w.WriteHeader(http.StatusOK)
 
 	case http.MethodDelete:
