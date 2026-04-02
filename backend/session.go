@@ -14,6 +14,7 @@ import (
 )
 
 type RingBuffer struct {
+	mu   sync.Mutex
 	buf  []byte
 	size int
 	w    int
@@ -25,6 +26,8 @@ func newRingBuffer(size int) *RingBuffer {
 }
 
 func (r *RingBuffer) Write(p []byte) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	for _, b := range p {
 		r.buf[r.w] = b
 		r.w = (r.w + 1) % r.size
@@ -35,8 +38,10 @@ func (r *RingBuffer) Write(p []byte) {
 }
 
 func (r *RingBuffer) Bytes() []byte {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if !r.full {
-		return r.buf[:r.w]
+		return append([]byte(nil), r.buf[:r.w]...)
 	}
 	out := make([]byte, r.size)
 	copy(out, r.buf[r.w:])
@@ -99,7 +104,9 @@ func (sm *SessionManager) reaper() {
 
 func generateSessionID() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		log.Fatalf("Failed to generate session ID: %v", err)
+	}
 	return fmt.Sprintf("%x", b)
 }
 

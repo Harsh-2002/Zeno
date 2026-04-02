@@ -192,13 +192,17 @@
   let scrollDragging = $state(false);
   let scrollHideTimer = null;
 
+  let isScrollable = $state(false);
+  let paneHovered = $state(false);
+
   function setupScrollbar(term) {
     function update() {
       const vp = term.element?.querySelector('.xterm-viewport');
       if (!vp) return;
       const scrollHeight = vp.scrollHeight;
       const clientHeight = vp.clientHeight;
-      if (scrollHeight <= clientHeight) { scrollVisible = false; return; }
+      isScrollable = scrollHeight > clientHeight;
+      if (!isScrollable) { scrollVisible = false; return; }
       const ratio = clientHeight / scrollHeight;
       scrollThumbHeight = Math.max(20, ratio * clientHeight);
       scrollThumbTop = (vp.scrollTop / (scrollHeight - clientHeight)) * (clientHeight - scrollThumbHeight);
@@ -206,9 +210,13 @@
       clearTimeout(scrollHideTimer);
       scrollHideTimer = setTimeout(() => { if (!scrollDragging) scrollVisible = false; }, 1500);
     }
-    // xterm fires onScroll when viewport scrolls
     term.onScroll(update);
     term.onWriteParsed(update);
+    // Watch viewport resize to recalculate
+    requestAnimationFrame(() => {
+      const vp = term.element?.querySelector('.xterm-viewport');
+      if (vp) new ResizeObserver(update).observe(vp);
+    });
   }
 
   function handleScrollThumbDown(e) {
@@ -292,6 +300,8 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="pane" data-pane-id={paneId}
   onmousedown={handleMouseDown}
+  onmouseenter={() => { paneHovered = true; }}
+  onmouseleave={() => { paneHovered = false; }}
   ondragenter={handleDragEnter} ondragleave={handleDragLeave}
   ondragover={handleDragOver} ondrop={handleDrop}>
 
@@ -303,7 +313,7 @@
     {/if}
     <div class="pane-terminal" bind:this={terminalEl}></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="custom-scrollbar" class:active={scrollVisible || scrollDragging}>
+    <div class="custom-scrollbar" class:active={(scrollVisible || paneHovered) && isScrollable || scrollDragging}>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="custom-scrollbar-thumb" class:dragging={scrollDragging}
         style="top:{scrollThumbTop}px; height:{scrollThumbHeight}px"
@@ -328,7 +338,7 @@
 
   .pane-frame {
     flex: 1;
-    border: 1px solid var(--border);
+    border: 1.5px solid var(--border);
     border-radius: 8px;
     overflow: hidden;
     transition: border-color 0.2s ease;
@@ -349,7 +359,7 @@
     opacity: 0; transition: opacity 0.15s, background 0.15s;
   }
   .pane:hover .pane-close { opacity: 0.7; }
-  .pane-close:hover { opacity: 1 !important; background: var(--danger); color: #fff; border-color: var(--danger); }
+  .pane:hover .pane-close:hover { opacity: 1; background: var(--danger); color: #fff; border-color: var(--danger); }
 
   .pane-terminal {
     height: 100%;

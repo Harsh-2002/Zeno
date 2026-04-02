@@ -200,7 +200,10 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 
 	// Generate token
 	tokenBytes := make([]byte, 32)
-	rand.Read(tokenBytes)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
 	token := hex.EncodeToString(tokenBytes)
 
 	s.authMu.Lock()
@@ -306,7 +309,11 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	session.ReplayTo(conn)
 
 	// Send session ID back
-	resp, _ := json.Marshal(sessionMsg{Action: "session", SessionID: session.ID})
+	resp, err := json.Marshal(sessionMsg{Action: "session", SessionID: session.ID})
+	if err != nil {
+		log.Printf("Failed to marshal session response: %v", err)
+		return
+	}
 	respMsg := make([]byte, len(resp)+1)
 	respMsg[0] = msgSession
 	copy(respMsg[1:], resp)

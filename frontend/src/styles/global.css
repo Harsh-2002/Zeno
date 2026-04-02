@@ -26,6 +26,9 @@
   --danger: #f14c4c;
   --surface-overlay: #252526;
   --shadow: rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.2);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
   --radius: 8px;
   --radius-sm: 6px;
   --radius-xs: 4px;
@@ -69,7 +72,6 @@ html:not(.ligatures) .xterm { font-feature-settings: "liga" 0, "calt" 0; }
   opacity: 0;
   transition: opacity 0.3s;
 }
-.pane:hover .custom-scrollbar,
 .custom-scrollbar.active {
   opacity: 1;
 }

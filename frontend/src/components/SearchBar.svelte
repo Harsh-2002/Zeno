@@ -86,7 +86,7 @@
     background: var(--surface-overlay);
     border: 1px solid var(--border);
     border-top: none;
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 var(--radius) var(--radius);
     padding: 8px 10px 6px;
     box-shadow: 0 6px 20px var(--shadow);
     display: flex;
