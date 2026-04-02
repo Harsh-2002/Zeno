@@ -14,7 +14,7 @@
   import SearchBar from './SearchBar.svelte';
   import DropOverlay from './DropOverlay.svelte';
 
-  let { paneId, tabId, canClose = false, onClosePane } = $props();
+  let { paneId, tabId, canClose = false, onClosePane, initialSessionId = '' } = $props();
   let terminalEl;
   let searchVisible = $state(false);
   let dropVisible = $state(false);
@@ -58,12 +58,7 @@
       term.open(terminalEl);
       try { const wgl = new WebglAddon(); wgl.onContextLost(() => wgl.dispose()); term.loadAddon(wgl); } catch (e) {}
 
-      // Wire the new terminal to the existing WebSocket
-      term.onData((data) => sendData(ws, data));
-      term.onBinary((data) => sendBinary(ws, data));
-      term.onTitleChange((title) => { if (title) setTabTitle(tabId, title); });
-
-      // Redirect incoming WS data to the new terminal
+      // Redirect incoming WS data to the new terminal (input handlers registered once below in fresh path)
       ws.onmessage = (event) => {
         const d = new Uint8Array(event.data);
         if (d.length > 0 && d[0] === MSG_DATA) {
@@ -118,7 +113,7 @@
       term.loadAddon(wgl);
     } catch (e) {}
 
-    let sessionId = '';
+    let sessionId = initialSessionId || '';
     let reconnectAttempts = 0;
     let currentWs = null;
 
@@ -176,7 +171,20 @@
             if (r && !r.closed) connectWs();
           }, delay);
         } else if (r && !r.closed) {
-          term.write('\r\n\x1b[1;31m[Session ended]\x1b[0m\r\n');
+          if (themeState.persistSessions) {
+            term.write('\r\n\x1b[33m[Process exited — press Enter for new session]\x1b[0m\r\n');
+            const disposable = term.onData((d) => {
+              if (d === '\r' || d === '\n') {
+                disposable.dispose();
+                sessionId = '';
+                reconnectAttempts = 0;
+                term.reset();
+                connectWs();
+              }
+            });
+          } else {
+            term.write('\r\n\x1b[1;31m[Session ended]\x1b[0m\r\n');
+          }
         }
       };
       ws.onerror = () => {};
@@ -250,36 +258,29 @@
     document.addEventListener('mouseup', onUp);
   }
 
+  // Fit terminal and preserve scroll position (prevents jumping to top)
+  function fitPreserveScroll(r) {
+    const vp = r.term.element?.querySelector('.xterm-viewport');
+    const wasAtBottom = vp ? (vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 5) : true;
+    r.fitAddon.fit();
+    sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows);
+    if (wasAtBottom && vp) requestAnimationFrame(() => { vp.scrollTop = vp.scrollHeight; });
+  }
+
   $effect(() => { const r = getPane(paneId); if (r) r.term.options.theme = THEMES[themeState.themeId]; });
   $effect(() => {
     const r = getPane(paneId);
-    if (r) {
-      r.term.options.fontSize = themeState.fontSize;
-      // Refit after font size change so terminal recalculates cols/rows
-      requestAnimationFrame(() => {
-        r.fitAddon.fit();
-        sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows);
-      });
-    }
+    if (r) { r.term.options.fontSize = themeState.fontSize; requestAnimationFrame(() => fitPreserveScroll(r)); }
   });
   $effect(() => { const r = getPane(paneId); if (r) r.term.options.cursorStyle = themeState.cursorStyle; });
   $effect(() => { const r = getPane(paneId); if (r) r.term.options.cursorBlink = themeState.cursorBlink; });
   $effect(() => {
     const r = getPane(paneId);
-    if (r) {
-      r.term.options.fontFamily = `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`;
-      requestAnimationFrame(() => { r.fitAddon.fit(); sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows); });
-    }
+    if (r) { r.term.options.fontFamily = `"${themeState.fontFamily}", Menlo, Monaco, "Cascadia Code", "Courier New", monospace`; requestAnimationFrame(() => fitPreserveScroll(r)); }
   });
   $effect(() => {
     const r = getPane(paneId);
-    if (r) {
-      r.term.options.lineHeight = themeState.lineHeight;
-      requestAnimationFrame(() => {
-        r.fitAddon.fit();
-        sendResize(r.getWs ? r.getWs() : r.ws, r.term.cols, r.term.rows);
-      });
-    }
+    if (r) { r.term.options.lineHeight = themeState.lineHeight; requestAnimationFrame(() => fitPreserveScroll(r)); }
   });
 
   function handleMouseDown() { setFocusedPane(paneId); }

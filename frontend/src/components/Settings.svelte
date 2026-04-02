@@ -2,7 +2,8 @@
   import { THEMES } from '../lib/constants/themes.js';
   import {
     themeState, setTheme, setFontSize, setFontFamily, setFontLigatures,
-    setCursorStyle, setCursorBlink, setLineHeight, setScrollback, setCopyOnSelect
+    setCursorStyle, setCursorBlink, setLineHeight, setScrollback, setCopyOnSelect,
+    setPersistSessions
   } from '../lib/stores/theme.svelte.js';
 
   let { visible = false, onClose } = $props();
@@ -92,6 +93,12 @@
       </label>
 
       <div class="section-label">Behavior</div>
+
+      <label class="row">
+        <span class="label">Persistent Sessions</span>
+        <input type="checkbox" class="toggle" checked={themeState.persistSessions}
+          onchange={(e) => setPersistSessions(e.target.checked)} />
+      </label>
 
       <label class="row">
         <span class="label">Scrollback</span>

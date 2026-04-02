@@ -70,3 +70,29 @@ export function markUnread(tabId) {
   const tab = tabState.tabs.find(t => t.id === tabId);
   if (tab && tabId !== tabState.activeTabId) tab.hasUnread = true;
 }
+
+// Workspace restore: create tab from saved state
+function hydrateNode(saved) {
+  if (saved.type === 'pane') {
+    return { type: 'pane', id: nextPaneId(), sessionId: saved.sessionId || '' };
+  }
+  return {
+    type: 'split',
+    direction: saved.direction,
+    ratio: saved.ratio,
+    first: hydrateNode(saved.first),
+    second: hydrateNode(saved.second),
+  };
+}
+
+export function createTabFromSaved(title, rootNode) {
+  const id = ++tabState.counter;
+  const tab = {
+    id,
+    title: title || `Terminal ${id}`,
+    rootNode: hydrateNode(rootNode),
+    hasUnread: false,
+  };
+  tabState.tabs.push(tab);
+  return tab;
+}

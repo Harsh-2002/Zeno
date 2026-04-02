@@ -12,7 +12,7 @@ export const themeState = $state({
   copyOnSelect: false,
   port: 8080,
   shell: '',
-  layout: '',
+  persistSessions: false,
   authEnabled: false,
 });
 
@@ -34,7 +34,7 @@ export async function loadConfig() {
     themeState.copyOnSelect = cfg.copyOnSelect || false;
     themeState.port = cfg.port || 8080;
     themeState.shell = cfg.shell || '';
-    themeState.layout = cfg.layout || '';
+    themeState.persistSessions = cfg.persistSessions || false;
     themeState.authEnabled = cfg.authEnabled || false;
     applyThemeCSS(themeState.themeId);
   } catch (e) {
@@ -59,7 +59,7 @@ function saveToServer() {
           lineHeight: themeState.lineHeight,
           scrollback: themeState.scrollback,
           copyOnSelect: themeState.copyOnSelect,
-          layout: themeState.layout,
+          persistSessions: themeState.persistSessions,
         })
       });
     } catch (e) {}
@@ -112,8 +112,8 @@ export function setFontLigatures(val) {
   saveToServer();
 }
 
-export function setLayout(layout) {
-  themeState.layout = layout;
+export function setPersistSessions(val) {
+  themeState.persistSessions = val;
   saveToServer();
 }
 

@@ -67,7 +67,7 @@ func newServer(command string, args []string, secret string, useTLS bool, config
 		secret:     secret,
 		useTLS:     useTLS,
 		config:     config,
-		sessions:   newSessionManager(command, args, 60*time.Second),
+		sessions:   newSessionManager(command, args, 60*time.Second, config),
 		authTokens: make(map[string]time.Time),
 	}
 	s.mux = http.NewServeMux()
@@ -81,6 +81,7 @@ func newServer(command string, args []string, secret string, useTLS bool, config
 	s.mux.HandleFunc("/auth", s.handleAuth)
 	s.mux.HandleFunc("/api/logout", s.handleLogout)
 	s.mux.HandleFunc("/api/config", s.authWrapFunc(s.handleConfig))
+	s.mux.HandleFunc("/api/workspace", s.authWrapFunc(s.handleWorkspace))
 	s.mux.HandleFunc("/api/files", s.authWrapFunc(s.handleFiles))
 	s.mux.HandleFunc("/api/upload", s.authWrapFunc(s.handleUpload))
 	s.mux.HandleFunc("/api/download", s.authWrapFunc(s.handleDownload))
@@ -416,6 +417,52 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 			session.rows = size.Rows
 			pty.Setsize(session.ptmx, &pty.Winsize{Rows: size.Rows, Cols: size.Cols})
 		}
+	}
+}
+
+// ─── Workspace ─────────────────────────────────────────────
+
+func (s *server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		configMu.RLock()
+		ws := s.config.Workspace
+		configMu.RUnlock()
+		if ws == "" {
+			http.Error(w, "No workspace", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(ws))
+
+	case http.MethodPut:
+		// Validate it's valid JSON
+		var ws WorkspaceState
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Read error", http.StatusBadRequest)
+			return
+		}
+		if err := json.Unmarshal(body, &ws); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		// Store as JSON string in config
+		configMu.Lock()
+		s.config.Workspace = string(body)
+		configMu.Unlock()
+		saveConfig(*s.config)
+		w.WriteHeader(http.StatusOK)
+
+	case http.MethodDelete:
+		configMu.Lock()
+		s.config.Workspace = ""
+		configMu.Unlock()
+		saveConfig(*s.config)
+		w.WriteHeader(http.StatusOK)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 

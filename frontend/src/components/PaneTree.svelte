@@ -26,7 +26,7 @@
 </script>
 
 {#if node.type === 'pane'}
-  <TerminalPane paneId={node.id} {tabId} canClose={hasSplits} {onClosePane} />
+  <TerminalPane paneId={node.id} {tabId} canClose={hasSplits} {onClosePane} initialSessionId={node.sessionId || ''} />
 {:else if node.type === 'split'}
   <div class="pane-split {node.direction}">
     <div class="pane-child" style="flex-basis: {node.ratio * 100}%">

@@ -21,7 +21,8 @@ type Config struct {
 	CopyOnSelect  bool    `toml:"copyOnSelect"  json:"copyOnSelect"`
 	Port          int     `toml:"port"          json:"port"`
 	Shell         string  `toml:"shell"         json:"shell"`
-	Layout        string  `toml:"layout,omitempty" json:"layout,omitempty"`
+	PersistSessions bool   `toml:"persistSessions" json:"persistSessions"`
+	Workspace       string `toml:"workspace,omitempty" json:"workspace,omitempty"`
 }
 
 var (

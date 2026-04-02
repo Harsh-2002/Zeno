@@ -50,18 +50,19 @@ func (r *RingBuffer) Bytes() []byte {
 }
 
 type Session struct {
-	ID       string
-	ptmx     *os.File
-	cmd      *exec.Cmd
-	ring     *RingBuffer
-	clients  []*websocket.Conn
-	clientMu sync.Mutex
-	writeMus map[*websocket.Conn]*sync.Mutex
-	lastSeen time.Time
-	cols     uint16
-	rows     uint16
-	done     chan struct{}
-	closed   bool
+	ID            string
+	ptmx          *os.File
+	cmd           *exec.Cmd
+	ring          *RingBuffer
+	clients       []*websocket.Conn
+	clientMu      sync.Mutex
+	writeMus      map[*websocket.Conn]*sync.Mutex
+	lastSeen      time.Time
+	cols          uint16
+	rows          uint16
+	done          chan struct{}
+	closed        bool
+	processExited bool
 }
 
 type SessionManager struct {
@@ -70,14 +71,16 @@ type SessionManager struct {
 	command  string
 	args     []string
 	timeout  time.Duration
+	config   *Config
 }
 
-func newSessionManager(command string, args []string, timeout time.Duration) *SessionManager {
+func newSessionManager(command string, args []string, timeout time.Duration, config *Config) *SessionManager {
 	sm := &SessionManager{
 		sessions: make(map[string]*Session),
 		command:  command,
 		args:     args,
 		timeout:  timeout,
+		config:   config,
 	}
 	go sm.reaper()
 	return sm
@@ -87,12 +90,31 @@ func (sm *SessionManager) reaper() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
+		configMu.RLock()
+		persist := sm.config.PersistSessions
+		configMu.RUnlock()
+
 		sm.mu.Lock()
 		for id, s := range sm.sessions {
 			s.clientMu.Lock()
 			nClients := len(s.clients)
 			s.clientMu.Unlock()
-			if nClients == 0 && !s.closed && time.Since(s.lastSeen) > sm.timeout {
+
+			if s.closed {
+				delete(sm.sessions, id)
+				continue
+			}
+
+			// Always clean up dead processes with no clients
+			if s.processExited && nClients == 0 {
+				log.Printf("Session %s process exited, cleaning up", id[:8])
+				s.close()
+				delete(sm.sessions, id)
+				continue
+			}
+
+			// When persist is OFF, reap idle sessions after timeout
+			if !persist && nClients == 0 && time.Since(s.lastSeen) > sm.timeout {
 				log.Printf("Session %s timed out, cleaning up", id[:8])
 				s.close()
 				delete(sm.sessions, id)
@@ -137,6 +159,7 @@ func (sm *SessionManager) Create() (*Session, error) {
 		for {
 			n, err := ptmx.Read(buf)
 			if err != nil {
+				s.processExited = true
 				close(s.done)
 				return
 			}

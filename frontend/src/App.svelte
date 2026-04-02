@@ -6,8 +6,9 @@
   import Settings from './components/Settings.svelte';
   import FileBrowser from './components/FileBrowser.svelte';
   import Toast from './components/Toast.svelte';
-  import { tabState, createTab, closeTab, switchToTab, switchRelative, getActiveTab } from './lib/stores/tabs.svelte.js';
+  import { tabState, createTab, createTabFromSaved, closeTab, switchToTab, switchRelative, getActiveTab } from './lib/stores/tabs.svelte.js';
   import { themeState, setTheme, setFontSize, applyThemeCSS, loadConfig } from './lib/stores/theme.svelte.js';
+  import { saveWorkspace, loadWorkspace } from './lib/stores/workspace.svelte.js';
   import { paneState, getPane, setFocusedPane, paneResources, nextPaneId } from './lib/stores/panes.svelte.js';
   import { forEachPane, findPaneById, findParent } from './lib/utils/paneTree.js';
   import { isModKey } from './lib/utils/shortcuts.js';
@@ -49,7 +50,7 @@
     const parentInfo = findParent(tab.rootNode, target);
     if (parentInfo) parentInfo.parent[parentInfo.which] = splitNode;
     else tab.rootNode = splitNode;
-    setTimeout(() => { fitActiveTab(); setFocusedPane(newPaneId); }, 50);
+    setTimeout(() => { fitActiveTab(); setFocusedPane(newPaneId); saveWorkspace(); }, 50);
   }
 
   function closePane() {
@@ -68,7 +69,7 @@
     else tab.rootNode = sibling;
     let nextFocus = sibling.type === 'pane' ? sibling.id : null;
     if (!nextFocus) forEachPane(sibling, (p) => { if (!nextFocus) nextFocus = p.id; });
-    setTimeout(() => { fitActiveTab(); if (nextFocus) setFocusedPane(nextFocus); }, 50);
+    setTimeout(() => { fitActiveTab(); if (nextFocus) setFocusedPane(nextFocus); saveWorkspace(); }, 50);
   }
 
   function handleContextAction(action, data) {
@@ -165,7 +166,19 @@
     window.addEventListener('focus', onFocus);
 
     // Load config from YAML, then create first tab
-    loadConfig().then(() => createTab());
+    loadConfig().then(async () => {
+      if (themeState.persistSessions) {
+        const ws = await loadWorkspace();
+        if (ws && ws.tabs && ws.tabs.length > 0) {
+          ws.tabs.forEach(t => createTabFromSaved(t.title, t.rootNode));
+          if (ws.activeTabIndex >= 0 && ws.activeTabIndex < tabState.tabs.length) {
+            switchToTab(tabState.tabs[ws.activeTabIndex].id);
+          }
+          return;
+        }
+      }
+      createTab();
+    });
 
     return () => {
       window.removeEventListener('resize', onResize);
