@@ -150,6 +150,17 @@ func (sm *SessionManager) Create() (*Session, error) {
 		done:     make(chan struct{}),
 	}
 
+	// Run start command if configured
+	configMu.RLock()
+	startCmd := sm.config.StartCommand
+	configMu.RUnlock()
+	if startCmd != "" {
+		go func() {
+			time.Sleep(200 * time.Millisecond) // wait for shell to initialize
+			s.ptmx.Write([]byte(startCmd + "\n"))
+		}()
+	}
+
 	// PTY reader — fans out to all clients + ring buffer
 	go func() {
 		buf := make([]byte, readBufSize)

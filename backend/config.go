@@ -19,6 +19,7 @@ type Config struct {
 	LineHeight    float64 `toml:"lineHeight"    json:"lineHeight"`
 	Scrollback    int     `toml:"scrollback"    json:"scrollback"`
 	CopyOnSelect  bool    `toml:"copyOnSelect"  json:"copyOnSelect"`
+	StartCommand  string  `toml:"startCommand"  json:"startCommand"`
 	Port          int     `toml:"port"          json:"port"`
 	Shell         string  `toml:"shell"         json:"shell"`
 	PersistSessions bool   `toml:"persistSessions" json:"persistSessions"`

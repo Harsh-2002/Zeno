@@ -10,6 +10,7 @@ export const themeState = $state({
   lineHeight: 1.1,
   scrollback: 100000,
   copyOnSelect: false,
+  startCommand: '',
   port: 8080,
   shell: '',
   persistSessions: false,
@@ -34,6 +35,7 @@ export async function loadConfig() {
     themeState.copyOnSelect = cfg.copyOnSelect || false;
     themeState.port = cfg.port || 8080;
     themeState.shell = cfg.shell || '';
+    themeState.startCommand = cfg.startCommand || '';
     themeState.persistSessions = cfg.persistSessions || false;
     themeState.authEnabled = cfg.authEnabled || false;
     applyThemeCSS(themeState.themeId);
@@ -59,6 +61,7 @@ function saveToServer() {
           lineHeight: themeState.lineHeight,
           scrollback: themeState.scrollback,
           copyOnSelect: themeState.copyOnSelect,
+          startCommand: themeState.startCommand,
           persistSessions: themeState.persistSessions,
         })
       });
@@ -109,6 +112,11 @@ export function setFontFamily(family) {
 export function setFontLigatures(val) {
   themeState.fontLigatures = val;
   document.documentElement.classList.toggle('ligatures', val);
+  saveToServer();
+}
+
+export function setStartCommand(cmd) {
+  themeState.startCommand = cmd;
   saveToServer();
 }
 

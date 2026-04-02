@@ -3,7 +3,7 @@
   import {
     themeState, setTheme, setFontSize, setFontFamily, setFontLigatures,
     setCursorStyle, setCursorBlink, setLineHeight, setScrollback, setCopyOnSelect,
-    setPersistSessions
+    setStartCommand, setPersistSessions
   } from '../lib/stores/theme.svelte.js';
 
   let { visible = false, onClose } = $props();
@@ -115,6 +115,13 @@
           onchange={(e) => setCopyOnSelect(e.target.checked)} />
       </label>
 
+      <div class="row">
+        <span class="label">Start Command</span>
+        <input class="text-input" type="text" value={themeState.startCommand}
+          placeholder="e.g. neofetch"
+          onchange={(e) => setStartCommand(e.target.value)} />
+      </div>
+
       {#if themeState.authEnabled}
         <div class="logout-section">
           <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -167,6 +174,14 @@
     padding: 10px 20px; min-height: 40px;
   }
   .label { font-size: 13px; color: var(--text-primary); }
+  .text-input {
+    background: var(--bg-hover); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: var(--radius-xs);
+    padding: 6px 10px; font-size: 12px; font-family: var(--font-mono);
+    outline: none; min-width: 130px;
+  }
+  .text-input:focus { border-color: var(--border-focus); }
+  .text-input::placeholder { color: var(--text-dim); }
   .control {
     color: var(--text-primary);
     border: 1px solid var(--border); border-radius: var(--radius-xs);
